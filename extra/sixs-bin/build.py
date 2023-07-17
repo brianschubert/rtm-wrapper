@@ -9,8 +9,10 @@ https://py6s.readthedocs.io/en/latest/installation.html#installing-6s
 import difflib
 import hashlib
 import io
+import os
 import pathlib
 import shutil
+import stat
 import subprocess
 import sys
 import tarfile
@@ -145,7 +147,10 @@ def build() -> None:
                 )
 
         # Install 6S executable into package source.
-        shutil.copyfile(bin, _PACKAGE_ROOT / "src" / "sixs_bin" / bin.name)
+        install_dest = _PACKAGE_ROOT / "src" / "sixs_bin" / bin.name
+        shutil.copyfile(bin, install_dest)
+        # Make sure file has owner execute permissions.
+        os.chmod(install_dest, install_dest.stat().st_mode | stat.S_IXUSR)
 
 
 if __name__ == "__main__":
