@@ -1,0 +1,5 @@
+# Package build artifact
+/src/sixs_bin/sixsV1.1
+
+# Cache of 6s archive for development.
+/6SV-1.1.tar
