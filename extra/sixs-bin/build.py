@@ -6,9 +6,12 @@ resource.
 
 https://py6s.readthedocs.io/en/latest/installation.html#installing-6s
 """
+from __future__ import annotations
 
 import difflib
 import hashlib
+import http
+import http.client
 import io
 import os
 import pathlib
@@ -29,7 +32,10 @@ _PACKAGE_ROOT: Final = pathlib.Path.cwd()
 
 # URL to obtain 6S archive from. Alternatively, place 6SV-1.1.tar in the package
 # root to avoid downloading a new copy.
-_SIXS_URL: Final = "https://rtwilson.com/downloads/6SV-1.1.tar"
+# From Py6S author's website.
+# _SIXS_URL: Final = "https://rtwilson.com/downloads/6SV-1.1.tar"
+# Mirror from archive.org snapshot.
+_SIXS_URL: Final = "https://web.archive.org/web/20220912090811if_/https://rtwilson.com/downloads/6SV-1.1.tar"
 
 # Name of 6S archive file.
 _SIXS_NAME: Final = pathlib.PurePath(urllib.parse.urlparse(_SIXS_URL).path).name
@@ -55,12 +61,18 @@ def _download_sixs(directory: pathlib.Path) -> None:
     if develop_sixs_cache.exists():
         sixs_archive: bytes = develop_sixs_cache.read_bytes()
     else:
-        sixs_archive: bytes = urllib.request.urlopen(_SIXS_URL).read()
+        response: http.client.HTTPResponse = urllib.request.urlopen(_SIXS_URL)
+        if response.status != http.HTTPStatus.OK.value:
+            raise BuildError(
+                f"failed to download 6S archive - got response "
+                f"{response.status} {response.reason}"
+            )
+        sixs_archive: bytes = response.read()
 
     digest = hashlib.sha256(sixs_archive).hexdigest()
     if digest != _SIXS_SHA256:
         raise RuntimeError(
-            f"6S archive hash validation valid. "
+            f"6S archive hash validation failed. "
             f"Expected SHA256={_SIXS_SHA256}, got SHA256={digest}"
         )
 
