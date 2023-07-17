@@ -1,0 +1,17 @@
+[tool.poetry]
+name = "rtm-wrapper"
+version = "0.1.0a0"
+description = ""
+authors = ["Brian Schubert <schubert.b@northeastern.edu>"]
+readme = "README.md"
+packages = [
+    { from = "src", include = "rtm_wrapper" }
+]
+
+[tool.poetry.dependencies]
+python = "^3.10"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
