@@ -28,3 +28,11 @@ def make_wrapper() -> SixS:
     except ImportError as ex:
         raise RuntimeError("Py6S not installed") from ex
     return SixS(str(sixs_bin()))
+
+
+def test_wrapper() -> None:
+    try:
+        from Py6S import SixS
+    except ImportError as ex:
+        raise RuntimeError("Py6S not installed") from ex
+    SixS.test(sixs_bin())
