@@ -1,3 +1,6 @@
+# Build artifacts
+/dist/
+
 # IDEs
 /.idea
 
