@@ -34,7 +34,7 @@ def test_py6s_available(capsys) -> None:
     assert captured.err == ""
 
 
-def test_dense_outputs():
+def test_dense_outputs() -> None:
     sixs = rtm_wrapper.make_sixs_wrapper()
 
     _wavelengths, results = Py6S.SixSHelpers.Wavelengths.run_vnir(sixs)
@@ -47,7 +47,7 @@ def test_dense_outputs():
     assert output_names == extracted_names
 
 
-def test_dense_outputs_empty():
+def test_dense_outputs_empty() -> None:
     dense_outputs = rtm_wrapper.Py6SDenseOutput.from_py6s(np.array([]))
 
     # Version not set.
@@ -58,3 +58,11 @@ def test_dense_outputs_empty():
         if field.name == "version":
             continue
         assert getattr(dense_outputs, field.name).size == 0
+
+
+def test_dense_outputs_derived() -> None:
+    sixs = rtm_wrapper.make_sixs_wrapper()
+
+    _wavelengths, results = Py6S.SixSHelpers.Wavelengths.run_vnir(sixs)
+
+    dense_outputs = rtm_wrapper.Py6SDenseOutput.from_py6s(results).compute_derived()

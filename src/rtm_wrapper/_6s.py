@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import dataclasses
 import typing
 from dataclasses import dataclass
 from typing import Literal, TypeAlias, TypedDict
@@ -221,6 +222,19 @@ class Py6SDenseOutput:
             )
 
         return cls(version=version, **attrs)
+
+    def compute_derived(self) -> Py6SDenseOutputExtended:
+        return Py6SDenseOutputExtended(**dataclasses.asdict(self))
+
+
+@dataclass
+class Py6SDenseOutputExtended(Py6SDenseOutput):
+    """
+    Dense array representation of Py6S sweep outputs with additional derived ouputs.
+    """
+
+    def from_py6s(cls, outputs: NDArray[Literal["*"], Object]) -> Py6SDenseOutput:
+        return super().from_py6s(outputs).compute_derived()
 
 
 def make_sixs_wrapper() -> SixS:
