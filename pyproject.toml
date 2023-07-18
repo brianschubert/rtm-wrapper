@@ -9,6 +9,7 @@ packages = [
 ]
 
 [tool.poetry.dependencies]
+# TODO test and relax dependency specifications
 python = "^3.10"
 py6s = "^1.9.2"
 sixs-bin = { path = "extra/sixs-bin", optional = true }
@@ -20,3 +21,19 @@ sixs-bin = { path = "extra/sixs-bin", optional = true }
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
+
+# Black config.
+[tool.black]
+# How many characters per line to allow.
+# https://black.readthedocs.io/en/stable/the_black_code_style/current_style.html#line-length
+line-length = 88
+# Don't skip skip temporary sanity checks.
+safe = true
+# Python versions that should be supported by Black's output.
+target-version = ["py310"]
+# Set to true to preview style changes that may be added in black's next major release.
+preview = false
+
+# isort config.
+[tool.isort]
+profile = "black"
