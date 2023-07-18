@@ -28,7 +28,7 @@ from typing import Final
 
 # Build script is always invoked from the base directory of the current distribution.
 _DISTRIBUTION_ROOT: Final = pathlib.Path.cwd()
-_PACKAGE_ROOT: Final = _DISTRIBUTION_ROOT / "src" / "sixs-bin"
+_PACKAGE_ROOT: Final = _DISTRIBUTION_ROOT / "src" / "sixs_bin"
 
 # URL to obtain 6S archive from. Alternatively, place 6SV-1.1.tar in the distribution
 # base directory to avoid downloading a new copy.

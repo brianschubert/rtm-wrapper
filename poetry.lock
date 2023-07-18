@@ -1851,8 +1851,8 @@ files = [
 
 [[package]]
 name = "sixs-bin"
-version = "0.1.0a0"
-description = ""
+version = "0.1.0-dev"
+description = "Wrapper for a local 6S binary."
 optional = true
 python-versions = "^3.10"
 files = []
