@@ -13,6 +13,7 @@ packages = [
 python = "^3.10"
 py6s = "^1.9.2"
 sixs-bin = { path = "extra/sixs-bin", optional = true }
+nptyping = "^2.5.0"
 
 [tool.poetry.group.dev.dependencies]
 black = "^23.7.0"
