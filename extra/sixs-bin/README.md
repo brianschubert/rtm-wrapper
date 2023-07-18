@@ -1,8 +1,17 @@
 # 6S Binary Wrapper
 
-Convenience package for building and installing a local 6S v1.1 executable.
+Convenience distribution  for building and installing a local 6S v1.1 executable.
 
-Install this package by enabling the `6s` feature in the main package.
+## Installing
+To install this distribution alongside `rtm-wrapper`, enable the `6s` [extra](https://peps.python.org/pep-0508/#extras):
+```shell
+$ pip install '.[6s]'  # in rtm-wrapper base directory
+```
+
+To manually install just this distribution straight from git, run
+```
+$ pip install 'sixs-bin@git+https://github.com/brianschubert/rtm-wrapper.git#subdirectory=extra/sixs-bin'
+```
 
 ## Testing
 
