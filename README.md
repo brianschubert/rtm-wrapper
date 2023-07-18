@@ -1,5 +1,7 @@
 # RTM Wrapper
 
+[![Code style: black](https://img.shields.io/badge/code%20style-black-black.svg)](https://github.com/psf/black)
+
 Common wrapper interface for [6S](https://salsa.umd.edu/6spage.html) and (eventually) [MODTRAN](http://modtran.spectral.com/).
 
 ## Install
