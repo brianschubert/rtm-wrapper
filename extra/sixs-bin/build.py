@@ -22,16 +22,16 @@ import sys
 import tarfile
 import tempfile
 import textwrap
-
-import urllib.request
 import urllib.parse
+import urllib.request
 from typing import Final
 
-# Build script is always invoked from the project root directory.
-_PACKAGE_ROOT: Final = pathlib.Path.cwd()
+# Build script is always invoked from the base directory of the current distribution.
+_DISTRIBUTION_ROOT: Final = pathlib.Path.cwd()
+_PACKAGE_ROOT: Final = _DISTRIBUTION_ROOT / "src" / "sixs-bin"
 
-# URL to obtain 6S archive from. Alternatively, place 6SV-1.1.tar in the package
-# root to avoid downloading a new copy.
+# URL to obtain 6S archive from. Alternatively, place 6SV-1.1.tar in the distribution
+# base directory to avoid downloading a new copy.
 # From Py6S author's website.
 # _SIXS_URL: Final = "https://rtwilson.com/downloads/6SV-1.1.tar"
 # Mirror from archive.org snapshot.
@@ -57,9 +57,9 @@ def _download_sixs(directory: pathlib.Path) -> None:
     """
     Download, validate, and extract 6S into the given directory.
     """
-    develop_sixs_cache = _PACKAGE_ROOT.joinpath(_SIXS_NAME)
+    develop_sixs_cache = _DISTRIBUTION_ROOT.joinpath(_SIXS_NAME)
     if develop_sixs_cache.exists():
-        sixs_archive: bytes = develop_sixs_cache.read_bytes()
+        sixs_archive = develop_sixs_cache.read_bytes()
     else:
         response: http.client.HTTPResponse = urllib.request.urlopen(_SIXS_URL)
         if response.status != http.HTTPStatus.OK.value:
@@ -67,7 +67,7 @@ def _download_sixs(directory: pathlib.Path) -> None:
                 f"failed to download 6S archive - got response "
                 f"{response.status} {response.reason}"
             )
-        sixs_archive: bytes = response.read()
+        sixs_archive = response.read()
 
     digest = hashlib.sha256(sixs_archive).hexdigest()
     if digest != _SIXS_SHA256:
@@ -190,15 +190,13 @@ def build(build_dir: pathlib.Path) -> None:
 
     # Install 6S executable into package source.
     print("Installing...")
-    install_dest = _PACKAGE_ROOT / "src" / "sixs_bin" / sixs_binary.name
-    _install(sixs_binary, install_dest)
+    _install(sixs_binary, _PACKAGE_ROOT / sixs_binary.name)
 
 
 def main() -> None:
     """Build script entrypoint."""
     with tempfile.TemporaryDirectory() as build_dir:
-        build_dir = pathlib.Path(build_dir)
-        build(build_dir)
+        build(pathlib.Path(build_dir))
 
 
 if __name__ == "__main__":
