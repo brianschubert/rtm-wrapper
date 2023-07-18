@@ -3,8 +3,9 @@ from __future__ import annotations
 import importlib.resources
 import pathlib
 from importlib.abc import Traversable
-from typing import Final, TYPE_CHECKING
+from typing import TYPE_CHECKING, Final
 
+# Py6S may not be installed.
 if TYPE_CHECKING:
     from Py6S import SixS
 
@@ -27,7 +28,7 @@ def make_wrapper() -> SixS:
         from Py6S import SixS
     except ImportError as ex:
         raise RuntimeError("Py6S not installed") from ex
-    return SixS(str(sixs_bin()))
+    return SixS(sixs_bin())
 
 
 def test_wrapper() -> None:
