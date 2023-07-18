@@ -2,6 +2,8 @@ import dataclasses
 import warnings
 from typing import Final
 
+import numpy as np
+
 # Temporary silence deprecated alias warnings with nptyping 2.5.0 for numpy>=1.24.
 warnings.filterwarnings("ignore", category=DeprecationWarning, module="nptyping")
 
@@ -36,7 +38,6 @@ def test_dense_outputs():
     sixs = rtm_wrapper.make_sixs_wrapper()
 
     _wavelengths, results = Py6S.SixSHelpers.Wavelengths.run_vnir(sixs)
-
     dense_outputs = rtm_wrapper.Py6SDenseOutput.from_py6s(results)
 
     # Ensure that all fields contained in the Py6S outputs are represented
@@ -44,3 +45,16 @@ def test_dense_outputs():
     output_names = set(dir(results[0]))
     extracted_names = {f.name for f in dataclasses.fields(dense_outputs)}
     assert output_names == extracted_names
+
+
+def test_dense_outputs_empty():
+    dense_outputs = rtm_wrapper.Py6SDenseOutput.from_py6s(np.array([]))
+
+    # Version not set.
+    assert dense_outputs.version == "unknown"
+
+    # All fields are empty arrays.
+    for field in dataclasses.fields(dense_outputs):
+        if field.name == "version":
+            continue
+        assert getattr(dense_outputs, field.name).size == 0

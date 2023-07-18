@@ -175,11 +175,12 @@ class Py6SDenseOutput:
 
     @classmethod
     def from_py6s(cls, outputs: NDArray[Literal["*"], Object]) -> Py6SDenseOutput:
-        if outputs.size == 0:
-            raise ValueError("received empty outputs")
-
-        # Assume same for all entries.
-        version = outputs[0].values["version"]
+        if len(outputs) == 0:
+            # Given empty output array
+            version = "unknown"
+        else:
+            # Assume same for all entries.
+            version = outputs[0].values["version"]
 
         attrs = {}
 
