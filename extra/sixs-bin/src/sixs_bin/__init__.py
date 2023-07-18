@@ -9,6 +9,8 @@ from typing import TYPE_CHECKING, Final
 if TYPE_CHECKING:
     from Py6S import SixS
 
+__version__ = "0.1.0-dev"
+
 _RESOURCE_ROOT: Final[Traversable] = importlib.resources.files(__package__)
 
 _SIXS_BIN: Final[Traversable] = _RESOURCE_ROOT / f"sixsV1.1"
