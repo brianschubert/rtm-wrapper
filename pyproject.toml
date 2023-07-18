@@ -13,11 +13,16 @@ packages = [
 python = "^3.10"
 py6s = "^1.9.2"
 sixs-bin = { path = "extra/sixs-bin", optional = true }
+nptyping = "^2.5.0"
 
 [tool.poetry.group.dev.dependencies]
 black = "^23.7.0"
 isort = "^5.12.0"
+pytest = "^7.4.0"
+
+[tool.poetry.group.nb.dependencies]
 jupyter = "^1.0.0"
+matplotlib = "^3.7.2"
 
 [tool.poetry.extras]
 6s = ["sixs-bin"]
