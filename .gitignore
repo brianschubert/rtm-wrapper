@@ -1,5 +1,7 @@
-# Build artifacts
+# Build and tooling artifacts
 /dist/
+/.mypy_cache/
+/.pytest_cache
 
 # IDEs
 /.idea
