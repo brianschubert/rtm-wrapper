@@ -102,7 +102,7 @@ class _OutputDict(TypedDict):
     solar_spectrum: float
 
 
-@dataclass
+@dataclass(frozen=True)
 class Py6SDenseOutput:
     """
     Dense array representation of Py6S sweep outputs.
@@ -227,7 +227,7 @@ class Py6SDenseOutput:
         return Py6SDenseOutputExtended(**dataclasses.asdict(self))
 
 
-@dataclass
+@dataclass(frozen=True)
 class Py6SDenseOutputExtended(Py6SDenseOutput):
     """
     Dense array representation of Py6S sweep outputs with additional derived ouputs.
