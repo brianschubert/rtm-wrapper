@@ -6,7 +6,7 @@ from typing import Literal, TypedDict
 
 import numpy as np
 import Py6S.outputs as sixs_outputs
-from nptyping import Float, Int, NDArray, Object
+from nptyping import Float, Int, NDArray, Object, Structure
 from Py6S import SixS
 from typing_extensions import TypeAlias
 
@@ -47,14 +47,14 @@ _FloatArray: TypeAlias = NDArray[Literal["*"], Float]
 _IntArray: TypeAlias = NDArray[Literal["*"], Int]
 
 _TransmittanceArray: TypeAlias = NDArray[
-    Literal["*"], Literal["[downward, upward, total]: Float"]
+    Literal["*"], Structure["[downward, upward, total]: Float"]
 ]
 _TransmittanceArrayDType = np.dtype(
     [("downward", np.float_), ("upward", np.float_), ("total", np.float_)]
 )
 
 _RatArray: TypeAlias = NDArray[
-    Literal["*"], Literal["[rayleigh, aerosol, total]: Float"]
+    Literal["*"], Structure["[rayleigh, aerosol, total]: Float"]
 ]
 _RatArrayDType = np.dtype(
     [("rayleigh", np.float_), ("aerosol", np.float_), ("total", np.float_)]
