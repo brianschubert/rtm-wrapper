@@ -2,12 +2,13 @@ from __future__ import annotations
 
 import typing
 from dataclasses import dataclass
-from typing import Literal, TypeAlias, TypedDict
+from typing import Literal, TypedDict
 
 import numpy as np
 import Py6S.outputs as sixs_outputs
 from nptyping import Float, Int, NDArray, Object
 from Py6S import SixS
+from typing_extensions import TypeAlias
 
 _TRANSMITTANCE_NAMES: TypeAlias = Literal[
     "aerosol_scattering",

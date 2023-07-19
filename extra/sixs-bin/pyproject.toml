@@ -13,7 +13,7 @@ include = [
 build = "build.py"
 
 [tool.poetry.dependencies]
-python = "^3.10"
+python = "^3.9"
 
 
 [build-system]

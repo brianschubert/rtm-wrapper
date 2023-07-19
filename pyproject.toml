@@ -10,10 +10,11 @@ packages = [
 
 [tool.poetry.dependencies]
 # TODO test and relax dependency specifications
-python = "^3.10"
+python = "^3.9"
 py6s = "^1.9.2"
-sixs-bin = { path = "extra/sixs-bin", optional = true }
 nptyping = "^2.5.0"
+typing-extensions = "^4.7.1"
+sixs-bin = { path = "extra/sixs-bin", optional = true }
 
 [tool.poetry.group.dev.dependencies]
 black = "^23.7.0"
