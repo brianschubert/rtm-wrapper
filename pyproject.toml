@@ -55,3 +55,7 @@ strict = true
 [[tool.mypy.overrides]]
 module = "Py6S.*"
 ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "rtm_wrapper._6s"
+warn_return_any = false
