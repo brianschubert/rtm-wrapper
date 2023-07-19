@@ -194,7 +194,7 @@ class Py6SDenseOutput:
             )
 
         # Extract transmittance arrays.
-        for trans_key in _TRANSMITTANCE_NAMES.__args__:
+        for trans_key in typing.get_args(_TRANSMITTANCE_NAMES):
             attrs[f"transmittance_{trans_key}"] = np.array(
                 [
                     (
@@ -208,7 +208,7 @@ class Py6SDenseOutput:
             )
 
         # Extract RAT arrays.
-        for rat_key in _RAT_NAMES.__args__:
+        for rat_key in typing.get_args(_RAT_NAMES):
             attrs[rat_key] = np.array(
                 [
                     (
