@@ -14,11 +14,7 @@ python = "^3.9"
 py6s = "^1.9.2"
 nptyping = "^2.5.0"
 typing-extensions = "^4.7.1"
-# Note: this path is resolved to an absolute path in the distribution metadata.
-# This will prevent pre-built distribution files (.tar.xz or .wheel) from working
-# on more than one machine. For now we'll only support installing directly from
-# the source tree when this extra is enabled.
-sixs-bin = { path = "extra/sixs-bin", optional = true }
+6s-bin = { git = "https://github.com/brianschubert/6s-bin.git", optional = true }
 
 [tool.poetry.group.dev.dependencies]
 black = "^23.7.0"
@@ -31,7 +27,7 @@ jupyter = "^1.0.0"
 matplotlib = "^3.7.2"
 
 [tool.poetry.extras]
-6s = ["sixs-bin"]
+6s = ["6s-bin"]
 
 [build-system]
 requires = ["poetry-core"]
