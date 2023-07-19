@@ -276,8 +276,8 @@ def make_sixs_wrapper() -> SixS:
 
     if s.sixs_path is None:
         raise RuntimeError(
-            f"No 6S binary could be found. Make sure 6S is installed and on the path. "
-            f"Alternatively, install {__package__.split('.')[0]} with the [6s] "
-            f"feature enabled."
+            f"No 6S binary could be found. Make sure 6S is installed and on your PATH. "
+            f"Tip: Install {__package__.split('.')[0]} with the [6s] "
+            f"feature enabled to compile and install a local 6S binary."
         )
     return s
