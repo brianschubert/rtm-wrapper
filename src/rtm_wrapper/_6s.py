@@ -1,13 +1,12 @@
 from __future__ import annotations
 
-import dataclasses
 import typing
 from dataclasses import dataclass
 from typing import Literal, TypeAlias, TypedDict
 
 import numpy as np
 import Py6S.outputs as sixs_outputs
-from nptyping import Float, Int, NDArray, Object, Structure
+from nptyping import Float, Int, NDArray, Object
 from Py6S import SixS
 
 _TRANSMITTANCE_NAMES: TypeAlias = Literal[
@@ -41,22 +40,20 @@ _RAT_NAMES: TypeAlias = Literal[
 ]
 
 _TransmittanceDict: TypeAlias = dict[_TRANSMITTANCE_NAMES, sixs_outputs.Transmittance]
-
 _RatDict: TypeAlias = dict[_RAT_NAMES, sixs_outputs.RayleighAerosolTotal]
 
 _FloatArray: TypeAlias = NDArray[Literal["*"], Float]
-
 _IntArray: TypeAlias = NDArray[Literal["*"], Int]
 
 _TransmittanceArray: TypeAlias = NDArray[
-    Literal["*"], Structure["downward: Float, upward: Float, total: Float"]
+    Literal["*"], Literal["[downward, upward, total]: Float"]
 ]
 _TransmittanceArrayDType = np.dtype(
     [("downward", np.float_), ("upward", np.float_), ("total", np.float_)]
 )
 
 _RatArray: TypeAlias = NDArray[
-    Literal["*"], Structure["rayleigh: Float, aerosol: Float, total: Float"]
+    Literal["*"], Literal["[rayleigh, aerosol, total]: Float"]
 ]
 _RatArrayDType = np.dtype(
     [("rayleigh", np.float_), ("aerosol", np.float_), ("total", np.float_)]
@@ -106,6 +103,8 @@ class _OutputDict(TypedDict):
 class Py6SDenseOutput:
     """
     Dense array representation of Py6S sweep outputs.
+
+    Exposes derived quantities as properties.
     """
 
     # Values
@@ -185,7 +184,7 @@ class Py6SDenseOutput:
 
         attrs = {}
 
-        # Extract values arrays.
+        # Extract value arrays.
         for value_key, value_type in typing.get_type_hints(_OutputDict).items():
             if value_key == "version":
                 continue
@@ -223,18 +222,43 @@ class Py6SDenseOutput:
 
         return cls(version=version, **attrs)
 
-    def compute_derived(self) -> Py6SDenseOutputExtended:
-        return Py6SDenseOutputExtended(**dataclasses.asdict(self))
+    @property
+    def cos_zenith_solar(self) -> _FloatArray:
+        return np.cos(np.deg2rad(self.solar_z))
 
+    @property
+    def cos_zenith_view(self) -> _FloatArray:
+        return np.cos(np.deg2rad(self.view_z))
 
-@dataclass(frozen=True)
-class Py6SDenseOutputExtended(Py6SDenseOutput):
-    """
-    Dense array representation of Py6S sweep outputs with additional derived ouputs.
-    """
+    @property
+    def transmittance_direct_down(self) -> _FloatArray:
+        return np.exp(-self.optical_depth_total["total"] / self.cos_zenith_solar)
 
-    def from_py6s(cls, outputs: NDArray[Literal["*"], Object]) -> Py6SDenseOutput:
-        return super().from_py6s(outputs).compute_derived()
+    @property
+    def transmittance_direct_up(self) -> _FloatArray:
+        return np.exp(-self.optical_depth_total["total"] / self.cos_zenith_view)
+
+    @property
+    def transmittance_diffuse_down(self) -> _FloatArray:
+        return (
+            self.transmittance_total_scattering["downward"]
+            - self.transmittance_direct_down
+        )
+
+    @property
+    def transmittance_diffuse_up(self) -> _FloatArray:
+        return (
+            self.transmittance_total_scattering["upward"] - self.transmittance_direct_up
+        )
+
+    @property
+    def radiance_solar_reflected(self) -> _FloatArray:
+        return (
+            self.cos_zenith_solar
+            * self.solar_spectrum
+            * self.transmittance_global_gas["total"]
+            * self.transmittance_total_scattering["total"]
+        ) / np.pi
 
 
 def make_sixs_wrapper() -> SixS:
@@ -256,10 +280,3 @@ def make_sixs_wrapper() -> SixS:
             f"feature enabled."
         )
     return s
-
-
-def populate_modtran_outputs(output_dict) -> None:
-    """
-    Populate the Py6S output dictionary with additional derived outputs.
-    """
-    pass

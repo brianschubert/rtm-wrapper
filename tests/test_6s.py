@@ -2,11 +2,11 @@ import dataclasses
 import warnings
 from typing import Final
 
-import numpy as np
-
 # Temporary silence deprecated alias warnings with nptyping 2.5.0 for numpy>=1.24.
 warnings.filterwarnings("ignore", category=DeprecationWarning, module="nptyping")
 
+
+import numpy as np
 import Py6S
 
 import rtm_wrapper
@@ -65,4 +65,8 @@ def test_dense_outputs_derived() -> None:
 
     _wavelengths, results = Py6S.SixSHelpers.Wavelengths.run_vnir(sixs)
 
-    dense_outputs = rtm_wrapper.Py6SDenseOutput.from_py6s(results).compute_derived()
+    dense_outputs = rtm_wrapper.Py6SDenseOutput.from_py6s(results)
+
+    # Ensure that all properties can be computed without error.
+    for p in dir(dense_outputs):
+        _ = getattr(dense_outputs, p)
