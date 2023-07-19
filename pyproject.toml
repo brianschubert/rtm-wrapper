@@ -49,6 +49,9 @@ preview = false
 profile = "black"
 
 # mypy config.
+[tool.mypy]
+strict = true
+
 [[tool.mypy.overrides]]
 module = "Py6S.*"
 ignore_missing_imports = true
