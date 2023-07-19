@@ -47,3 +47,8 @@ preview = false
 # isort config.
 [tool.isort]
 profile = "black"
+
+# mypy config.
+[[tool.mypy.overrides]]
+module = "Py6S.*"
+ignore_missing_imports = true
