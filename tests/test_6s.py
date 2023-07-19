@@ -2,7 +2,7 @@ import dataclasses
 import warnings
 from typing import Final
 
-# Temporary silence deprecated alias warnings with nptyping 2.5.0 for numpy>=1.24.
+# Temporarily silence deprecated alias warnings from nptyping 2.5.0 for numpy>=1.24.
 warnings.filterwarnings("ignore", category=DeprecationWarning, module="nptyping")
 
 
