@@ -2,18 +2,21 @@
 
 [[package]]
 name = "6s-bin"
-version = "0.1.0-dev"
+version = "0.1.0"
 description = "Wrapper for a local 6S binary."
 optional = true
 python-versions = "^3.9"
 files = []
 develop = false
 
+[package.extras]
+wrapper = ["py6s (>=1.9.2,<2.0.0)"]
+
 [package.source]
 type = "git"
 url = "https://github.com/brianschubert/6s-bin.git"
 reference = "HEAD"
-resolved_reference = "9df8f53481e3095570665a769ac546c925cddd2e"
+resolved_reference = "762ed4b81fe0a4bc5b8cffcac0ef1104957f8fca"
 
 [[package]]
 name = "anyio"
