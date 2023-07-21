@@ -2,7 +2,7 @@
 
 [[package]]
 name = "6s-bin"
-version = "0.1.0"
+version = "0.2.0"
 description = "Wrapper for a local 6S binary."
 optional = true
 python-versions = "^3.9"
@@ -10,13 +10,13 @@ files = []
 develop = false
 
 [package.extras]
-wrapper = ["py6s (>=1.9.2,<2.0.0)"]
+wrapper = ["py6s (>=1.9.2,<2.0.0)", "python-dateutil (>=2.8.2,<3.0.0)"]
 
 [package.source]
 type = "git"
 url = "https://github.com/brianschubert/6s-bin.git"
 reference = "HEAD"
-resolved_reference = "762ed4b81fe0a4bc5b8cffcac0ef1104957f8fca"
+resolved_reference = "d6d0e5ab50ef7236cad92d4346a95b44b2435baa"
 
 [[package]]
 name = "anyio"
@@ -2846,8 +2846,9 @@ testing = ["big-O", "jaraco.functools", "jaraco.itertools", "more-itertools", "p
 
 [extras]
 6s = ["6s-bin"]
+splib07 = ["splib07-loader"]
 
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.9"
-content-hash = "658877000e6f7c73874c1afb705ce1df61b31a84e79429c1ed610a71f5961e89"
+content-hash = "e27a7d0e1a881f442c4672896194701db7d75088d4dd6f14d392d33e18899ec6"
