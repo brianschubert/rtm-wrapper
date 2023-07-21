@@ -2575,6 +2575,41 @@ files = [
 ]
 
 [[package]]
+name = "spectral"
+version = "0.23.1"
+description = "Spectral Python (SPy) is a Python module for hyperspectral image processing."
+optional = true
+python-versions = "*"
+files = [
+    {file = "spectral-0.23.1-py3-none-any.whl", hash = "sha256:07d04da64ab51f789bd280c51d16a4aa7f7acf774bdd88eb95e600eeec3db664"},
+    {file = "spectral-0.23.1.tar.gz", hash = "sha256:e1822273525ef3583b27a966226d55afe09e7d29a7236cfcd8bc0dfb1f968fc2"},
+]
+
+[package.dependencies]
+numpy = "*"
+
+[[package]]
+name = "splib07-loader"
+version = "0.2.0"
+description = ""
+optional = true
+python-versions = "^3.9"
+files = []
+develop = false
+
+[package.dependencies]
+nptyping = "^2.5.0"
+numpy = "^1.25.1"
+spectral = "^0.23.1"
+typing-extensions = "^4.7.1"
+
+[package.source]
+type = "git"
+url = "https://github.com/brianschubert/splib07-loader.git"
+reference = "HEAD"
+resolved_reference = "16c8d79c1eb320c25c65132ad63b29cd03cd0d41"
+
+[[package]]
 name = "stack-data"
 version = "0.6.2"
 description = "Extract data from python stack frames and tracebacks for informative displays"
@@ -2815,4 +2850,4 @@ testing = ["big-O", "jaraco.functools", "jaraco.itertools", "more-itertools", "p
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.9"
-content-hash = "8cacd1d5ce2ce2530ce718696a17a85f792189dacc374aaf6123c15c40ee7808"
+content-hash = "658877000e6f7c73874c1afb705ce1df61b31a84e79429c1ed610a71f5961e89"

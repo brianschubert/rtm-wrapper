@@ -1,11 +1,12 @@
 # Build and tooling artifacts
 /dist/
 /.mypy_cache/
-/.pytest_cache
+/.pytest_cache/
 
 # IDEs
 /.idea
 
 # Misc
-/.local-notes
+/.local-notes/
 /notebooks/scratch*.ipynb
+/notebooks/usgs_splib07.zip

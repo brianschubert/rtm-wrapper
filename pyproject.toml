@@ -15,6 +15,8 @@ py6s = "^1.9.2"
 nptyping = "^2.5.0"
 typing-extensions = "^4.7.1"
 6s-bin = { git = "https://github.com/brianschubert/6s-bin.git", optional = true }
+splib07-loader = { git = "https://github.com/brianschubert/splib07-loader.git", optional = true }
+
 
 [tool.poetry.group.dev.dependencies]
 black = "^23.7.0"
@@ -28,6 +30,7 @@ matplotlib = "^3.7.2"
 
 [tool.poetry.extras]
 6s = ["6s-bin"]
+splib07 = ["splib07-loader"]
 
 [build-system]
 requires = ["poetry-core"]
