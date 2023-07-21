@@ -10,7 +10,7 @@ from nptyping import Float, Int, NDArray, Object, Structure
 from Py6S import SixS
 from typing_extensions import TypeAlias
 
-_TRANSMITTANCE_NAMES: TypeAlias = Literal[
+_TransmittanceName: TypeAlias = Literal[
     "aerosol_scattering",
     "ch4",
     "co",
@@ -24,7 +24,7 @@ _TRANSMITTANCE_NAMES: TypeAlias = Literal[
     "water",
 ]
 
-_RAT_NAMES: TypeAlias = Literal[
+_RatName: TypeAlias = Literal[
     "direction_of_plane_polarization",
     "optical_depth_plane",
     "optical_depth_total",
@@ -40,8 +40,8 @@ _RAT_NAMES: TypeAlias = Literal[
     "spherical_albedo",
 ]
 
-_TransmittanceDict: TypeAlias = dict[_TRANSMITTANCE_NAMES, sixs_outputs.Transmittance]
-_RatDict: TypeAlias = dict[_RAT_NAMES, sixs_outputs.RayleighAerosolTotal]
+_TransmittanceDict: TypeAlias = dict[_TransmittanceName, sixs_outputs.Transmittance]
+_RatDict: TypeAlias = dict[_RatName, sixs_outputs.RayleighAerosolTotal]
 
 _FloatArray: TypeAlias = NDArray[Literal["*"], Float]
 _IntArray: TypeAlias = NDArray[Literal["*"], Int]
@@ -194,7 +194,7 @@ class Py6SDenseOutput:
             )
 
         # Extract transmittance arrays.
-        for trans_key in typing.get_args(_TRANSMITTANCE_NAMES):
+        for trans_key in typing.get_args(_TransmittanceName):
             attrs[f"transmittance_{trans_key}"] = np.array(
                 [
                     (
@@ -208,7 +208,7 @@ class Py6SDenseOutput:
             )
 
         # Extract RAT arrays.
-        for rat_key in typing.get_args(_RAT_NAMES):
+        for rat_key in typing.get_args(_RatName):
             attrs[rat_key] = np.array(
                 [
                     (
