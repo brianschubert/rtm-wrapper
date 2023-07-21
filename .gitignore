@@ -8,4 +8,4 @@
 
 # Misc
 /.local-notes
-/notebooks/scratch.ipynb
+/notebooks/scratch*.ipynb
