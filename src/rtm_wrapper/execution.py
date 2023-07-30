@@ -4,6 +4,7 @@ import abc
 import concurrent.futures
 import logging
 import typing
+from typing import Callable
 
 import numpy as np
 import xarray as xr
@@ -32,7 +33,12 @@ class SerialExecutor(SweepExecutor):
     def __init__(self) -> None:
         self._results = None
 
-    def run(self, sweep: SweepSimulation, engine: RTMEngine):
+    def run(
+        self,
+        sweep: SweepSimulation,
+        engine: RTMEngine,
+        step_callback: Callable[[tuple[int, ...]], None] | None = None,
+    ):
         self._results = xr.Dataset(coords=sweep.sweep_grid.coords)
         self._results = self._results.assign(
             {
@@ -50,6 +56,8 @@ class SerialExecutor(SweepExecutor):
                 self._results.variables["apparent_radiance"][
                     it.multi_index
                 ] = out.apparent_radiance
+                if step_callback is not None:
+                    step_callback(it.multi_index)
 
     def collect_results(self) -> xr.Dataset:
         return self._results
@@ -68,11 +76,19 @@ class ConcurrentExecutor(SweepExecutor):
     _results: xr.Dataset | None
     _max_workers: int | None
 
-    def __init__(self, max_workers: int | None = None) -> None:
+    def __init__(
+        self,
+        max_workers: int | None = None,
+    ) -> None:
         self._results = None
         self._max_workers = max_workers
 
-    def run(self, sweep: SweepSimulation, engine: RTMEngine):
+    def run(
+        self,
+        sweep: SweepSimulation,
+        engine: RTMEngine,
+        step_callback: Callable[[tuple[int, ...]], None] | None = None,
+    ):
         logger = logging.getLogger(__name__)
         self._results = xr.Dataset(coords=sweep.sweep_grid.coords)
         self._results = self._results.assign(
@@ -113,6 +129,8 @@ class ConcurrentExecutor(SweepExecutor):
                         error_input,
                         exc_info=ex,
                     )
+                if step_callback is not None:
+                    step_callback(idx)
 
     def collect_results(self) -> xr.Dataset:
         return self._results
