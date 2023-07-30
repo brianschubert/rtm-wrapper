@@ -113,15 +113,3 @@ def _script2coords(script: SweepScript) -> dict[str, tuple[str, Sequence[Any]]]:
             coords[param_name] = (stage_name, param_values)
 
     return coords
-
-
-class SweepExecutor:
-    def run(self, inputs: SweepSimulation):
-        ...
-
-    def collect_results(self) -> Any:
-        ...
-
-
-class SerialExecutor(SweepExecutor):
-    pass
