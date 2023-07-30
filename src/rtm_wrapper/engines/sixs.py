@@ -35,9 +35,9 @@ class PySixSEngine(RTMEngine):
 
         self._wrapper.run()
 
-        out = Py6SDenseOutput.from_py6s(self._wrapper.outputs)
-
-        raise NotImplementedError
+        return Outputs(
+            apparent_radiance=self._wrapper.outputs.values["apparent_radiance"]
+        )
 
 
 # Original helpers below.

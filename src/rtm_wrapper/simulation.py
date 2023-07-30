@@ -38,7 +38,7 @@ class Outputs:
     Temporary / unstable representation.
     """
 
-    dataset: xr.Dataset
+    apparent_radiance: float
 
 
 class SweepSimulation:
