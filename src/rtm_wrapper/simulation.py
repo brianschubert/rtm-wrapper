@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+import dataclasses
 import math
 from dataclasses import dataclass
 from typing import Any
 
+import numpy as np
 import xarray as xr
 
 
@@ -38,23 +40,41 @@ class Outputs:
 class SweepSimulation:
     """
     Sweep specification over model inputs.
+
+    Temporary / unstable representation.
     """
 
     base: Inputs
 
-    sweep: xr.Dataset
+    sweep_grid: xr.DataArray
 
-    def __init__(self, base: Inputs, sweep: dict[str, Any]) -> None:
+    def __init__(self, sweep: dict[str, Any], base: Inputs) -> None:
         self.base = base
-        self.sweep = xr.Dataset(coords=sweep)
+
+        # For now, only support dense cartesian product sweeps of input parameters.
+        dims = list(sweep)
+        sweep_shape = [len(param) for param in sweep.values()]
+        input_grid = np.full(sweep_shape, fill_value=None, dtype=object)
+
+        with np.nditer(
+            input_grid, flags=["multi_index", "refs_ok"], op_flags=["writeonly"]
+        ) as it:
+            for x in it:
+                overrides = {}
+                for idx, dim in zip(it.multi_index, dims):
+                    overrides[dim] = sweep[dim][idx]
+
+                x[...] = dataclasses.replace(base, **overrides)
+
+        self.sweep_grid = xr.DataArray(input_grid, coords=sweep)
 
     @property
     def sweep_size(self) -> int:
-        return math.prod(self.sweep_shape)
+        return self.sweep_grid.data.size
 
     @property
     def sweep_shape(self) -> tuple[int, ...]:
-        return tuple(self.sweep.coords.dims.values())
+        return self.sweep_grid.data.shape
 
 
 class SweepExecutor:
