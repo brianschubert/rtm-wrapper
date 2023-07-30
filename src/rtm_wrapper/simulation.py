@@ -54,7 +54,7 @@ class SweepSimulation:
         # For now, only support dense cartesian product sweeps of input parameters.
         dims = list(sweep)
         sweep_shape = [len(param) for param in sweep.values()]
-        input_grid = np.full(sweep_shape, fill_value=None, dtype=object)
+        input_grid = np.empty(sweep_shape, dtype=object)
 
         with np.nditer(
             input_grid, flags=["multi_index", "refs_ok"], op_flags=["writeonly"]
