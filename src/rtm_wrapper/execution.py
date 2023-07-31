@@ -5,6 +5,7 @@ import concurrent.futures
 import copy
 import logging
 import typing
+from abc import ABC
 from typing import Callable
 
 import numpy as np
@@ -26,13 +27,37 @@ class SweepExecutor(abc.ABC):
         ...
 
 
-class SerialExecutor(SweepExecutor):
-    """Executor that runs simulations in series."""
+class LocalMemoryExecutor(SweepExecutor, ABC):
+    """
+    Base class for executors that store the entire simulation results in a local,
+    in-memory ``xarray.Dataset``.
+    """
 
     _results: xr.Dataset | None
 
     def __init__(self) -> None:
         self._results = None
+
+    def collect_results(self) -> xr.Dataset:
+        return self._results
+
+    def _allocate_results_like(self, sweep_grid: xr.DataArray) -> None:
+        self._results = xr.Dataset(
+            {
+                # Preallocate variables for each output.
+                output_name: (
+                    # All output variables have the same shape as the input grid.
+                    sweep_grid.dims,
+                    np.empty(sweep_grid.data.shape, dtype=output_type),
+                )
+                for output_name, output_type in typing.get_type_hints(Outputs).items()
+            },
+            coords=sweep_grid.coords,
+        )
+
+
+class SerialExecutor(LocalMemoryExecutor):
+    """Executor that runs simulations in series."""
 
     def run(
         self,
@@ -40,18 +65,7 @@ class SerialExecutor(SweepExecutor):
         engine: RTMEngine,
         step_callback: Callable[[tuple[int, ...]], None] | None = None,
     ):
-        # Preallocate variables for each output.
-        self._results = xr.Dataset(
-            {
-                output_name: (
-                    # All output variables have the same shape as the input grid.
-                    sweep.sweep_grid.dims,
-                    np.empty(sweep.sweep_shape, dtype=output_type),
-                )
-                for output_name, output_type in typing.get_type_hints(Outputs).items()
-            },
-            coords=sweep.sweep_grid.coords,
-        )
+        self._allocate_results_like(sweep.sweep_grid)
 
         with np.nditer(sweep.sweep_grid.data, flags=["multi_index", "refs_ok"]) as it:
             for inputs in it:
@@ -63,26 +77,22 @@ class SerialExecutor(SweepExecutor):
                 if step_callback is not None:
                     step_callback(it.multi_index)
 
-    def collect_results(self) -> xr.Dataset:
-        return self._results
 
-
-class ConcurrentExecutor(SweepExecutor):
+class ConcurrentExecutor(LocalMemoryExecutor):
     """
-    Executor the launches simulations in worker threads.
+    Executor the launches simulations in concurrent worker threads.
 
     This executor is designed to take advantage of engines that release the GIL
     while running.
     """
 
-    _results: xr.Dataset | None
     _max_workers: int | None
 
     def __init__(
         self,
         max_workers: int | None = None,
     ) -> None:
-        self._results = None
+        super().__init__()
         self._max_workers = max_workers
 
     def run(
@@ -92,18 +102,7 @@ class ConcurrentExecutor(SweepExecutor):
         step_callback: Callable[[tuple[int, ...]], None] | None = None,
     ):
         logger = logging.getLogger(__name__)
-        # Preallocate variables for each output.
-        self._results = xr.Dataset(
-            {
-                output_name: (
-                    # All output variables have the same shape as the input grid.
-                    sweep.sweep_grid.dims,
-                    np.empty(sweep.sweep_shape, dtype=output_type),
-                )
-                for output_name, output_type in typing.get_type_hints(Outputs).items()
-            },
-            coords=sweep.sweep_grid.coords,
-        )
+        self._allocate_results_like(sweep.sweep_grid)
 
         # Execute simulations in worker threads.
         # This is fast so long as the engine releases the GIL while running.
@@ -138,6 +137,3 @@ class ConcurrentExecutor(SweepExecutor):
                     )
                 if step_callback is not None:
                     step_callback(idx)
-
-    def collect_results(self) -> xr.Dataset:
-        return self._results
