@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 import dataclasses
+import typing
 from collections.abc import Sequence
 from dataclasses import dataclass
-from typing import Any, Literal, Union
+from typing import Any, Literal, Optional, Union
 
 import numpy as np
 import xarray as xr
@@ -21,16 +22,16 @@ class Inputs:
     Temporary / unstable representation.
     """
 
-    alt_sensor: float | Literal["sealevel", "satellite"]
+    alt_sensor: Union[float, Literal["sealevel", "satellite"]]
     """Altitude of sensor. Either predefined or km the open interval (0, 100)."""
 
     # TODO verify that any target altitude really is allowable.
-    alt_target: float | Literal["sealevel"]
+    alt_target: Union[float, Literal["sealevel"]]
     """
     Altitude of target. Either predefined or km (any non-negative float).
     """
 
-    atmosphere: Literal["MidlatitudeSummer"] | tuple[float, float]
+    atmosphere: Union[Literal["MidlatitudeSummer"], tuple[float, float]]
     """
     Atmosphere profile. Either standard profile name or tuple of the form
     (
@@ -44,12 +45,12 @@ class Inputs:
     Aerosol profile, given as standard name.
     """
 
-    aerosol_aot: list[tuple[float, float]] | None
+    aerosol_aot: Optional[list[tuple[float, float]]]
     """
     Detailed AOT profile, given as list of tuples of the form (layer thickness, layer aot).
     """
 
-    refl_background: float | np.ndarray
+    refl_background: Union[float, np.ndarray]
     """
     Reflectance of background. 
     
@@ -57,7 +58,7 @@ class Inputs:
     wavelengths in the first column and reflectances in the seconds column.
     """
 
-    refl_target: float | np.ndarray
+    refl_target: Union[float, np.ndarray]
     """
     Reflectance of target. 
     
@@ -133,6 +134,7 @@ def _script2coords(script: SweepScript) -> dict[str, tuple[str, Sequence[Any]]]:
     xarray handle that on its own.
     """
     coords = {}
+    param_types = typing.get_type_hints(Inputs)
 
     for stage_idx, raw_stage in enumerate(script):
         stage_name = f"stage{stage_idx}"
@@ -149,6 +151,16 @@ def _script2coords(script: SweepScript) -> dict[str, tuple[str, Sequence[Any]]]:
                     f"Appeared again in {stage_name}"
                 )
 
-            coords[param_name] = (stage_name, param_values)
+            coords[param_name] = (
+                stage_name,
+                np.asarray(param_values, dtype=_type2dtype(param_types[param_name])),
+            )
 
     return coords
+
+
+def _type2dtype(type_: type) -> np.dtype:
+    try:
+        return np.dtype(type_)
+    except TypeError:
+        return np.dtype(object)
