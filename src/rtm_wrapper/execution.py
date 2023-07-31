@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import abc
 import concurrent.futures
+import copy
 import logging
 import typing
 from typing import Callable
@@ -69,8 +70,6 @@ class ConcurrentExecutor(SweepExecutor):
 
     This executor is designed to take advantage of engines that release the GIL
     while running.
-
-    Assumes that the engine's ``run_simulation`` method is thread-safe.
     """
 
     _results: xr.Dataset | None
@@ -102,14 +101,15 @@ class ConcurrentExecutor(SweepExecutor):
         )
 
         # Execute simulations in worker threads.
-        # This is fast so long as the engine release the GIL while running.
+        # This is fast so long as the engine releases the GIL while running.
         with concurrent.futures.ThreadPoolExecutor(
             max_workers=self._max_workers
         ) as executor:
-            # TODO add copy-engine interface for engines that are not thread safe
             futures_to_index = {
                 executor.submit(
-                    lambda idx: engine.run_simulation(sweep.sweep_grid.data[idx]),
+                    lambda idx: copy.deepcopy(engine).run_simulation(
+                        sweep.sweep_grid.data[idx]
+                    ),
                     idx,
                 ): idx
                 for idx in np.ndindex(sweep.sweep_shape)
