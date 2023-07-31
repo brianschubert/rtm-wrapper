@@ -33,6 +33,8 @@ class PySixSEngine(RTMEngine):
         for layer in inputs.aot:
             self._wrapper.aero_profile.add_layer(*layer)
 
+        self._wrapper.wavelength = Py6S.Wavelength(inputs.wavelength)
+
         self._wrapper.run()
 
         return Outputs(
@@ -77,18 +79,17 @@ _RatDict: TypeAlias = dict[_RatName, sixs_outputs.RayleighAerosolTotal]
 _FloatArray: TypeAlias = NDArray[Literal["*"], Float]
 
 _IntArray: TypeAlias = NDArray[Literal["*"], Int]
+
 _TransmittanceArray: TypeAlias = NDArray[
     Literal["*"], Structure["[downward, upward, total]: Float"]
 ]
-
 _TransmittanceArrayDType = np.dtype(
     [("downward", np.float_), ("upward", np.float_), ("total", np.float_)]
 )
+
 _RatArray: TypeAlias = NDArray[
     Literal["*"], Structure["[rayleigh, aerosol, total]: Float"]
 ]
-
-
 _RatArrayDType = np.dtype(
     [("rayleigh", np.float_), ("aerosol", np.float_), ("total", np.float_)]
 )
