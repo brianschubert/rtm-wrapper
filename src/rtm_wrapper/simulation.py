@@ -3,7 +3,7 @@ from __future__ import annotations
 import dataclasses
 from collections.abc import Sequence
 from dataclasses import dataclass
-from typing import Any, Union
+from typing import Any, Literal, Union
 
 import numpy as np
 import xarray as xr
@@ -21,13 +21,49 @@ class Inputs:
     Temporary / unstable representation.
     """
 
-    water: float
+    alt_sensor: float
+    """Altitude of sensor in km."""
 
-    ozone: float
+    alt_target: float
+    """Altitude of target in km."""
 
-    aot: list[tuple[float, float]]
+    atmosphere: Literal["MidlatitudeSummer"] | tuple[float, float]
+    """
+    Atmosphere profile. Either standard profile name or tuple of the form
+    (
+        total water along vertical path in g/cm^2, 
+        total ozone in along vertical path in cm-atm
+    )
+    """
+
+    aerosol_profile: Literal["Maritime", "Continental"]
+    """
+    Aerosol profile, given as standard name.
+    """
+
+    aerosol_aot: list[tuple[float, float]] | None
+    """
+    Detailed AOT profile, given as list of tuples of the form (layer thickness, layer aot).
+    """
+
+    refl_background: float | np.ndarray
+    """
+    Reflectance of background. 
+    
+    Either float for spectrally-constant reflectance or an Nx2 array with
+    wavelengths in the first column and reflectances in the seconds column.
+    """
+
+    refl_target: float | np.ndarray
+    """
+    Reflectance of target. 
+    
+    Either float for spectrally-constant reflectance or an Nx2 array with
+    wavelengths in the first column and reflectances in the seconds colum
+    """
 
     wavelength: float
+    """Simulated wavelength."""
 
 
 @dataclass
@@ -60,7 +96,7 @@ class SweepSimulation:
         # arrays, it breaks when there are dimensions without coordinates.
         resolve_dataset = xr.Dataset(coords=sweep_coords)
         self.sweep_grid = xr.DataArray(
-            np.empty(list(resolve_dataset.dims.values()), dtype=object),
+            np.empty(tuple(resolve_dataset.dims.values()), dtype=object),
             coords=resolve_dataset.coords,
         )
 
