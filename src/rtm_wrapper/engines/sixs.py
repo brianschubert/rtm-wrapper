@@ -16,30 +16,74 @@ from rtm_wrapper.simulation import Inputs, Outputs
 
 
 class PySixSEngine(RTMEngine):
-    _wrapper: Py6S.SixS
+    _base_wrapper: Py6S.SixS
 
     def __init__(self, wrapper: Py6S.SixS) -> None:
         if wrapper.sixs_path is None:
             raise ValueError("misconfigured wrapper - sixs_path not defined")
-        self._wrapper = copy.deepcopy(wrapper)
+        self._base_wrapper = wrapper
 
     def run_simulation(self, inputs: Inputs) -> Outputs:
-        self._wrapper.atmos_profile = Py6S.AtmosProfile.UserWaterAndOzone(
-            inputs.water, inputs.ozone
-        )
-        self._wrapper.aero_profile = Py6S.AeroProfile.UserProfile(
-            Py6S.AeroProfile.Continental
-        )
-        for layer in inputs.aot:
-            self._wrapper.aero_profile.add_layer(*layer)
+        wrapper = copy.deepcopy(self._base_wrapper)
 
-        self._wrapper.wavelength = Py6S.Wavelength(inputs.wavelength)
+        # TODO validation and error checking.
 
-        self._wrapper.run()
+        # Configure altitudes.
+        wrapper.altitudes.target_alt_pres = -inputs.alt_target
+        wrapper.altitudes.sensor_alt_pres = -inputs.alt_sensor
+
+        # Configure atmosphere profile.
+        if isinstance(inputs.atmosphere, str):
+            atmos_profile = getattr(Py6S.AtmosProfile, inputs.atmosphere)
+            wrapper.atmos_profile = Py6S.AtmosProfile.PredefinedType(atmos_profile)
+        else:
+            wrapper.atmos_profile = Py6S.AtmosProfile.UserWaterAndOzone(
+                *inputs.atmosphere
+            )
+
+        # Configure aerosol profile.
+        aero_profile = getattr(Py6S.AeroProfile, inputs.aerosol_profile)
+        if inputs.aerosol_aot is None:
+            wrapper.aero_profile = Py6S.AeroProfile.PredefinedType(aero_profile)
+        else:
+            wrapper.aero_profile = Py6S.AeroProfile.UserProfile(aero_profile)
+            for layer in inputs.aerosol_aot:
+                wrapper.aero_profile.add_layer(*layer)
+
+        # Configure ground reflectance.
+        wrapper.ground_reflectance = Py6S.GroundReflectance.HeterogeneousLambertian(
+            radius=0.5,
+            ro_target=inputs.refl_target,
+            ro_env=inputs.refl_background,
+        )
+
+        # Configure wavelength.
+        wrapper.wavelength = Py6S.Wavelength(inputs.wavelength)
+
+        wrapper.run()
 
         return Outputs(
-            apparent_radiance=self._wrapper.outputs.values["apparent_radiance"]
+            **{
+                output_name: wrapper.outputs.values[output_name]
+                for output_name in typing.get_type_hints(Outputs)
+            }
         )
+
+
+def pysixs_default_inputs() -> Inputs:
+    """
+    Return input parameters that replicate Py6S's defaults.
+    """
+    return Inputs(
+        alt_sensor=0.0,
+        alt_target=0.0,
+        atmosphere="MidlatitudeSummer",
+        aerosol_profile="Maritime",
+        aerosol_aot=None,
+        refl_background=0.3,
+        refl_target=0.3,
+        wavelength=0.5,
+    )
 
 
 # Original helpers below.
