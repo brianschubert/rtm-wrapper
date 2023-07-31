@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import abc
 import concurrent.futures
-import copy
 import logging
 import typing
 from abc import ABC
@@ -84,6 +83,11 @@ class ConcurrentExecutor(LocalMemoryExecutor):
 
     This executor is designed to take advantage of engines that release the GIL
     while running.
+
+    **WARNING**: this executor assumes that the provided engine's ``run_simulation``
+    method is thread-safe. All worker threads operate on the same engine instance.
+    Make sure that the provided engine *does not* mutate itself or any global state
+    without appropriate locking.
     """
 
     _max_workers: int | None
@@ -111,9 +115,7 @@ class ConcurrentExecutor(LocalMemoryExecutor):
         ) as executor:
             futures_to_index = {
                 executor.submit(
-                    lambda idx: copy.deepcopy(engine).run_simulation(
-                        sweep.sweep_grid.data[idx]
-                    ),
+                    lambda idx: engine.run_simulation(sweep.sweep_grid.data[idx]),
                     idx,
                 ): idx
                 for idx in np.ndindex(sweep.sweep_shape)
