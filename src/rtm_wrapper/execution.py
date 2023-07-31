@@ -40,23 +40,26 @@ class SerialExecutor(SweepExecutor):
         engine: RTMEngine,
         step_callback: Callable[[tuple[int, ...]], None] | None = None,
     ):
-        self._results = xr.Dataset(coords=sweep.sweep_grid.coords)
-        self._results = self._results.assign(
+        # Preallocate variables for each output.
+        self._results = xr.Dataset(
             {
                 output_name: (
+                    # All output variables have the same shape as the input grid.
                     sweep.sweep_grid.dims,
                     np.empty(sweep.sweep_shape, dtype=output_type),
                 )
                 for output_name, output_type in typing.get_type_hints(Outputs).items()
-            }
+            },
+            coords=sweep.sweep_grid.coords,
         )
 
         with np.nditer(sweep.sweep_grid.data, flags=["multi_index", "refs_ok"]) as it:
             for inputs in it:
                 out = engine.run_simulation(inputs.item())
-                self._results.variables["apparent_radiance"][
-                    it.multi_index
-                ] = out.apparent_radiance
+                for output_name in typing.get_type_hints(Outputs):
+                    self._results.variables[output_name][it.multi_index] = getattr(
+                        out, output_name
+                    )
                 if step_callback is not None:
                     step_callback(it.multi_index)
 
@@ -89,15 +92,17 @@ class ConcurrentExecutor(SweepExecutor):
         step_callback: Callable[[tuple[int, ...]], None] | None = None,
     ):
         logger = logging.getLogger(__name__)
-        self._results = xr.Dataset(coords=sweep.sweep_grid.coords)
-        self._results = self._results.assign(
+        # Preallocate variables for each output.
+        self._results = xr.Dataset(
             {
                 output_name: (
+                    # All output variables have the same shape as the input grid.
                     sweep.sweep_grid.dims,
                     np.empty(sweep.sweep_shape, dtype=output_type),
                 )
                 for output_name, output_type in typing.get_type_hints(Outputs).items()
-            }
+            },
+            coords=sweep.sweep_grid.coords,
         )
 
         # Execute simulations in worker threads.
@@ -119,14 +124,16 @@ class ConcurrentExecutor(SweepExecutor):
                 idx = futures_to_index[future]
                 try:
                     out = future.result()
-                    self._results.variables["apparent_radiance"][
-                        idx
-                    ] = out.apparent_radiance
+                    for output_name in typing.get_type_hints(Outputs):
+                        self._results.variables[output_name][idx] = getattr(
+                            out, output_name
+                        )
                 except Exception as ex:
                     error_input = sweep.sweep_grid.data[idx]
                     logger.error(
-                        "exception occured when running simulation with input=%r",
+                        "exception occurred when running simulation with input=%r, idx=%r",
                         error_input,
+                        idx,
                         exc_info=ex,
                     )
                 if step_callback is not None:
