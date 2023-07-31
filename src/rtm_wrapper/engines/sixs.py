@@ -29,8 +29,17 @@ class PySixSEngine(RTMEngine):
         # TODO validation and error checking.
 
         # Configure altitudes.
-        wrapper.altitudes.target_alt_pres = -inputs.alt_target
-        wrapper.altitudes.sensor_alt_pres = -inputs.alt_sensor
+        if inputs.alt_sensor == "sealevel":
+            wrapper.altitudes.set_sensor_sea_level()
+        elif inputs.alt_sensor == "satellite":
+            wrapper.altitudes.set_sensor_satellite_level()
+        else:
+            wrapper.altitudes.set_sensor_custom_altitude(inputs.alt_sensor)
+
+        if inputs.alt_target == "sealevel":
+            wrapper.altitudes.set_target_sea_level()
+        else:
+            wrapper.altitudes.set_target_custom_altitude(inputs.alt_target)
 
         # Configure atmosphere profile.
         if isinstance(inputs.atmosphere, str):

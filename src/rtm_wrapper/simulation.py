@@ -21,11 +21,14 @@ class Inputs:
     Temporary / unstable representation.
     """
 
-    alt_sensor: float
-    """Altitude of sensor in km."""
+    alt_sensor: float | Literal["sealevel", "satellite"]
+    """Altitude of sensor. Either predefined or km the open interval (0, 100)."""
 
-    alt_target: float
-    """Altitude of target in km."""
+    # TODO verify that any target altitude really is allowable.
+    alt_target: float | Literal["sealevel"]
+    """
+    Altitude of target. Either predefined or km (any non-negative float).
+    """
 
     atmosphere: Literal["MidlatitudeSummer"] | tuple[float, float]
     """
