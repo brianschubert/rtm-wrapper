@@ -18,7 +18,9 @@ from rtm_wrapper.simulation import Inputs, Outputs
 class PySixSEngine(RTMEngine):
     _base_wrapper: Py6S.SixS
 
-    def __init__(self, wrapper: Py6S.SixS) -> None:
+    def __init__(self, wrapper: Py6S.SixS | None = None) -> None:
+        if wrapper is None:
+            wrapper = make_sixs_wrapper()
         if wrapper.sixs_path is None:
             raise ValueError("misconfigured wrapper - sixs_path not defined")
         self._base_wrapper = wrapper
