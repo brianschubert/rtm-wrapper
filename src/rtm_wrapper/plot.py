@@ -40,7 +40,10 @@ def plot_sweep_single(
 
 
 def plot_sweep_legend(
-    sweep_variable: xr.DataArray, *, ax: Axes | None = None
+    sweep_variable: xr.DataArray,
+    *,
+    ax: Axes | None = None,
+    legend_kwargs: dict[str, Any] | None = None,
 ) -> tuple[Figure, Axes]:
     sweep_variable = sweep_variable.squeeze(drop=True)
 
@@ -70,7 +73,11 @@ def plot_sweep_legend(
         )
     ax.set_xlabel(_coords_axes_label(axes_coords))
     ax.set_ylabel(_coords_axes_label(sweep_variable))
-    ax.legend(title=_coords_axes_label(legend_coords))
+
+    if legend_kwargs is None:
+        legend_kwargs = {}
+    legend_kwargs.setdefault("title", _coords_axes_label(legend_coords))
+    ax.legend(**legend_kwargs)
 
     return fig, ax
 
