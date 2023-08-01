@@ -61,10 +61,12 @@ def plot_sweep_legend(
     axes_coords = sweep_variable.coords[axes_dim]
 
     for legend_idx, legend_label in enumerate(legend_coords.values):
+        if isinstance(legend_label, float):
+            legend_label = f"{legend_label:.3f}"
         ax.plot(
             axes_coords.values,
             sweep_variable.values[legend_idx, :],
-            label=legend_label,
+            label=str(legend_label),
         )
     ax.set_xlabel(_coords_axes_label(axes_coords))
     ax.set_ylabel(_coords_axes_label(sweep_variable))
@@ -107,10 +109,12 @@ def plot_sweep_grid(
             sweep_variable.values[idx[0], idx[1], :],
         )
 
+    y_prefix = _coords_axes_label(grid_y_coords, include_units=False)
     for ax, label in zip(axs[:, 0], grid_y_coords.values):
-        ax.set_ylabel(f"{label}")
+        ax.set_ylabel(f"{y_prefix}={label}")
+    x_prefix = _coords_axes_label(grid_x_coords, include_units=False)
     for ax, label in zip(axs[0, :], grid_x_coords.values):
-        ax.set_title(f"{label}")
+        ax.set_title(f"{x_prefix}={label}")
 
     fig.supxlabel(_coords_axes_label(axes_coords))
     fig.supylabel(_coords_axes_label(sweep_variable))
@@ -122,9 +126,12 @@ def _coords_with_dims(arr: xr.DataArray, dims: tuple[Hashable, ...]) -> list[Has
     return [name for name, coord in arr.coords.items() if coord.dims == dims]
 
 
-def _coords_axes_label(coords: xr.DataArray) -> str:
-    base_label = coords.attrs.get("title", coords.name)
-    if coords.attrs.get("unit") is not None:
+def _coords_axes_label(coords: xr.DataArray, include_units: bool = True) -> str:
+    base_label = coords.attrs.get("title")
+    if base_label is None:
+        # Title missing OR set to None.
+        base_label = coords.name
+    if include_units and coords.attrs.get("unit") is not None:
         # Unit exists and was not set to None.
         unit_str = coords.attrs["unit"].replace("-", r"\cdot{}")
         return rf"{base_label} (${unit_str}$)"
