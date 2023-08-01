@@ -10,8 +10,10 @@ import numpy as np
 import xarray as xr
 from typing_extensions import TypeAlias
 
-SweepParameter: TypeAlias = tuple[str, Sequence[Any]]
-SweepScript: TypeAlias = list[Union[SweepParameter, list[SweepParameter]]]
+from rtm_wrapper import util
+
+ParameterValues: TypeAlias = Sequence[Any]
+SweepScript: TypeAlias = dict[str, Union[ParameterValues, dict[str, Any]]]
 
 
 @dataclass
@@ -22,51 +24,61 @@ class Inputs:
     Temporary / unstable representation.
     """
 
-    alt_sensor: Union[float, Literal["sealevel", "satellite"]]
+    alt_sensor: Annotated[
+        Union[float, Literal["sealevel", "satellite"]],
+        "Sensor Altitude",
+        "kilometers",
+    ]
     """Altitude of sensor. Either predefined or km the open interval (0, 100)."""
 
     # TODO verify that any target altitude really is allowable.
-    alt_target: Union[float, Literal["sealevel"]]
+    alt_target: Annotated[
+        Union[float, Literal["sealevel"]], "Target Altitude", "kilometers"
+    ]
     """
     Altitude of target. Either predefined or km (any non-negative float).
     """
 
-    atmosphere: Union[Literal["MidlatitudeSummer"], tuple[float, float]]
+    atmosphere: Annotated[
+        Union[Literal["MidlatitudeSummer"], tuple[float, float]],
+        "Atmosphere",
+        None,
+    ]
     """
     Atmosphere profile. Either standard profile name or tuple of the form
     (
-        total water along vertical path in g/cm^2, 
+        total water along vertical path in g/cm^2,
         total ozone in along vertical path in cm-atm
     )
     """
 
-    aerosol_profile: Literal["Maritime", "Continental"]
+    aerosol_profile: Annotated[Literal["Maritime", "Continental"], None, None]
     """
     Aerosol profile, given as standard name.
     """
 
-    aerosol_aot: Optional[list[tuple[float, float]]]
+    aerosol_aot: Annotated[Optional[list[tuple[float, float]]], "AOT Layers", None]
     """
     Detailed AOT profile, given as list of tuples of the form (layer thickness, layer aot).
     """
 
-    refl_background: Union[float, np.ndarray]
+    refl_background: Annotated[Union[float, np.ndarray], "Background Reflectance", None]
     """
-    Reflectance of background. 
+    Reflectance of background.
     
     Either float for spectrally-constant reflectance or an Nx2 array with
     wavelengths in the first column and reflectances in the seconds column.
     """
 
-    refl_target: Union[float, np.ndarray]
+    refl_target: Annotated[Union[float, np.ndarray], "Target Reflectance", None]
     """
-    Reflectance of target. 
+    Reflectance of target.
     
     Either float for spectrally-constant reflectance or an Nx2 array with
     wavelengths in the first column and reflectances in the seconds colum
     """
 
-    wavelength: float
+    wavelength: Annotated[float, "Wavelength", "micrometers"]
     """Simulated wavelength."""
 
 
@@ -92,6 +104,7 @@ class SweepSimulation:
 
     def __init__(self, script: SweepScript, base: Inputs) -> None:
         sweep_coords = _script2coords(script)
+        input_names = typing.get_type_hints(Inputs).keys()
 
         # TODO maybe tidy.
         # We create an intermediate empty dataset to validate the sweep coordinates
@@ -114,6 +127,7 @@ class SweepSimulation:
                 overrides = {
                     k: v.item()
                     for k, v in self.sweep_grid[it.multi_index].coords.items()
+                    if k in input_names
                 }
                 x[...] = dataclasses.replace(base, **overrides)
 
@@ -126,7 +140,9 @@ class SweepSimulation:
         return self.sweep_grid.data.shape
 
 
-def _script2coords(script: SweepScript) -> dict[str, tuple[str, Sequence[Any]]]:
+def _script2coords(
+    script: SweepScript,
+) -> dict[str, tuple[str, Sequence[Any], dict[str, Any]]]:
     """
     Convert sweep script format to corresponding xarray coordinates.
 
@@ -134,26 +150,55 @@ def _script2coords(script: SweepScript) -> dict[str, tuple[str, Sequence[Any]]]:
     xarray handle that on its own.
     """
     coords = {}
-    param_types = typing.get_type_hints(Inputs)
+    input_hints = typing.get_type_hints(Inputs, include_extras=True)
 
-    for stage_idx, raw_stage in enumerate(script):
-        stage_name = f"stage{stage_idx}"
-        if isinstance(raw_stage, tuple):
-            stage = [raw_stage]
-        else:
-            stage = raw_stage
-
-        for param_name, param_values in stage:
-            if param_name in coords:
+    for sweep_name, sweep_spec in script.items():
+        if isinstance(sweep_spec, dict):
+            # This sweep axes is a "compound" dimension that varies multiple parameters
+            # and/or includes custom attributes.
+            if sweep_name in input_hints:
                 raise ValueError(
-                    f"parameter '{param_name}' set more than once in sweep script. "
-                    f"First appeared in {coords[param_name][0]}. "
-                    f"Appeared again in {stage_name}"
+                    f"compound sweep axes '{sweep_name}' must not be an input parameter name"
                 )
 
+            attribute_parts, sweep_parameters = util.partition_dict(
+                sweep_spec, _is_special
+            )
+
+            # Assume at least one parameter was specific, and that all parameter values
+            # have the same length.
+            sweep_len = len(next(iter(sweep_parameters.values())))
+
+            coords[sweep_name] = (
+                sweep_name,
+                attribute_parts.get("__coords__", np.arange(sweep_len)),
+                {
+                    key[2:-2]: value
+                    for key, value in attribute_parts.items()
+                    if key != "__coords__"
+                },
+            )
+        else:
+            # This sweep axes is a "simple" axes that varies a single parameter.
+            sweep_parameters = {sweep_name: sweep_spec}
+
+        for param_name, param_values in sweep_parameters.items():
+            if param_name not in input_hints:
+                raise ValueError(f"unknown input name '{param_name}'")
+            if param_name in coords:
+                raise ValueError(
+                    f"parameter '{param_name}' set more than once in sweep script"
+                )
+            param_type, param_title, param_unit = typing.get_args(
+                input_hints[param_name]
+            )
             coords[param_name] = (
-                stage_name,
-                np.asarray(param_values, dtype=_type2dtype(param_types[param_name])),
+                sweep_name,
+                np.asarray(param_values, dtype=_type2dtype(param_type)),
+                {
+                    "title": param_title,
+                    "unit": param_unit,
+                },
             )
 
     return coords
@@ -164,3 +209,7 @@ def _type2dtype(type_: type) -> np.dtype:
         return np.dtype(type_)
     except TypeError:
         return np.dtype(object)
+
+
+def _is_special(name: str) -> bool:
+    return name.startswith("__") and name.endswith("__")

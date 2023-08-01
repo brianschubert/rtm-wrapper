@@ -3,6 +3,10 @@ Misc utilities.
 """
 
 import logging.config
+from typing import Callable, Hashable, TypeVar
+
+_T = TypeVar("_T", bound=Hashable)
+_V = TypeVar("_V")
 
 
 def setup_debug_root_logging(level: int = logging.NOTSET) -> None:
@@ -39,3 +43,24 @@ def setup_debug_root_logging(level: int = logging.NOTSET) -> None:
             "root": {"handlers": ["console"], "level": level},
         }
     )
+
+
+def partition_dict(
+    dictionary: dict[_T, _V], predicate: Callable[[_T], bool]
+) -> tuple[dict[_T, _V], dict[_T, _V]]:
+    """
+    Partition the given dictionary based on the provided predicate.
+
+    >>> d = {i: i**2 for i in range(6)}
+    >>> partition_dict(d, lambda x: x % 2 == 0)
+    ({0: 0, 2: 4, 4: 16}, {1: 1, 3: 9, 5: 25})
+    """
+    left_dict = {}
+    right_dict = {}
+    for key, value in dictionary.items():
+        if predicate(key):
+            left_dict[key] = value
+        else:
+            right_dict[key] = value
+
+    return left_dict, right_dict
