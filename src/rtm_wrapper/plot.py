@@ -15,6 +15,8 @@ if TYPE_CHECKING:
 def plot_sweep_single(
     sweep_variable: xr.DataArray, *, ax: Axes | None = None
 ) -> tuple[Figure, Axes]:
+    sweep_variable = sweep_variable.squeeze(drop=True)
+
     if ax is None:
         fig, ax = plt.subplots()
     else:
@@ -22,7 +24,8 @@ def plot_sweep_single(
 
     if sweep_variable.ndim != 1:
         raise ValueError(
-            f"only single dimensional sweeps supported, got ndim={sweep_variable.ndim}"
+            f"only single dimensional sweeps supported, "
+            f"got ndim={sweep_variable.ndim} (after squeezing)"
         )
 
     (sweep_dim,) = sweep_variable.dims
@@ -39,6 +42,8 @@ def plot_sweep_single(
 def plot_sweep_legend(
     sweep_variable: xr.DataArray, *, ax: Axes | None = None
 ) -> tuple[Figure, Axes]:
+    sweep_variable = sweep_variable.squeeze(drop=True)
+
     if ax is None:
         fig, ax = plt.subplots()
     else:
@@ -46,7 +51,8 @@ def plot_sweep_legend(
 
     if sweep_variable.ndim != 2:
         raise ValueError(
-            f"only two dimensional sweeps supported, got ndim={sweep_variable.ndim}"
+            f"only two dimensional sweeps supported, "
+            f"got ndim={sweep_variable.ndim} (after squeezing)"
         )
 
     legend_dim, axes_dim = sweep_variable.dims
@@ -73,9 +79,12 @@ def plot_sweep_grid(
     fig: Figure | None = None,
     subplot_kwargs: dict[str, Any] | None = None,
 ) -> tuple[Figure, Axes | np.ndarray]:
+    sweep_variable = sweep_variable.squeeze(drop=True)
+
     if sweep_variable.ndim != 3:
         raise ValueError(
-            f"only three dimensional sweeps supported, got ndim={sweep_variable.ndim}"
+            f"only three dimensional sweeps supported, "
+            f"got ndim={sweep_variable.ndim} (after squeezing)"
         )
 
     grid_y_dim, grid_x_dim, axes_dim = sweep_variable.dims
