@@ -4,7 +4,7 @@ import dataclasses
 import typing
 from collections.abc import Sequence
 from dataclasses import dataclass
-from typing import Any, Literal, Optional, Union
+from typing import Annotated, Any, Literal, Optional, Union
 
 import numpy as np
 import xarray as xr
@@ -78,7 +78,7 @@ class Outputs:
     Temporary / unstable representation.
     """
 
-    apparent_radiance: float
+    apparent_radiance: Annotated[float, "Apparent Radiance", "W/sr-m^2"]
 
 
 class SweepSimulation:
