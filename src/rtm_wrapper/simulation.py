@@ -52,7 +52,9 @@ class Inputs:
     )
     """
 
-    aerosol_profile: Annotated[Literal["Maritime", "Continental"], None, None]
+    aerosol_profile: Annotated[
+        Literal["Maritime", "Continental"], "Aerosol Profile", None
+    ]
     """
     Aerosol profile, given as standard name.
     """
@@ -194,7 +196,7 @@ def _script2coords(
             )
             coords[param_name] = (
                 sweep_name,
-                np.asarray(param_values, dtype=_type2dtype(param_type)),
+                _pack_params(param_values, param_type),
                 {
                     "title": param_title,
                     "unit": param_unit,
@@ -204,11 +206,14 @@ def _script2coords(
     return coords
 
 
-def _type2dtype(type_: type) -> np.dtype:
+def _pack_params(param_values: Any, hint: type) -> np.ndarray:
     try:
-        return np.dtype(type_)
+        dtype = np.dtype(hint)
+        return np.asarray(param_values, dtype=dtype)
     except TypeError:
-        return np.dtype(object)
+        arr = np.empty(len(param_values), dtype=object)
+        arr[...] = param_values
+        return arr
 
 
 def _is_special(name: str) -> bool:
