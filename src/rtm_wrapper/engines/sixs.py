@@ -86,8 +86,8 @@ def pysixs_default_inputs() -> Inputs:
     Return input parameters that replicate Py6S's defaults.
     """
     return Inputs(
-        alt_sensor=0.0,
-        alt_target=0.0,
+        alt_sensor="sealevel",
+        alt_target="sealevel",
         atmosphere="MidlatitudeSummer",
         aerosol_profile="Maritime",
         aerosol_aot=None,
