@@ -68,7 +68,7 @@ def plot_sweep_legend(
         )
     ax.set_xlabel(_coords_axes_label(axes_coords))
     ax.set_ylabel(_coords_axes_label(sweep_variable))
-    ax.legend()
+    ax.legend(title=_coords_axes_label(legend_coords))
 
     return fig, ax
 
@@ -124,7 +124,8 @@ def _coords_with_dims(arr: xr.DataArray, dims: tuple[Hashable, ...]) -> list[Has
 
 def _coords_axes_label(coords: xr.DataArray) -> str:
     base_label = coords.attrs.get("title", coords.name)
-    if "unit" in coords.attrs:
+    if coords.attrs.get("unit") is not None:
+        # Unit exists and was not set to None.
         unit_str = coords.attrs["unit"].replace("-", r"\cdot{}")
         return rf"{base_label} (${unit_str}$)"
     else:
