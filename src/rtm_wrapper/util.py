@@ -76,7 +76,7 @@ def build_version() -> str:
             check=True,
             capture_output=True,
         )
-        build_commit = result.stdout
+        build_commit = result.stdout.strip()
         return f"{base_version}+{build_commit}"
     except (FileNotFoundError, subprocess.SubprocessError):
         return base_version
