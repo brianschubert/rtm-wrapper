@@ -75,7 +75,7 @@ class Parameter:
 
 @dataclass
 class AltitudePredefined(Parameter):
-    name: Literal["sealevel", "satellite"]
+    name: Annotated[Literal["sealevel", "satellite"], {"title": "Altitude"}]
 
 
 @dataclass
@@ -101,12 +101,14 @@ class AtmosphereAotLayers(AtmospherePredefined):
 
 @dataclass
 class AerosolProfilePredefined(Parameter):
-    name: Literal["Maritime", "Urban", "Continental"]
+    name: Annotated[
+        Literal["Maritime", "Urban", "Continental"], {"title": "Aerosol Profile"}
+    ]
 
 
 @dataclass
 class GroundReflectanceHomogenousUniformLambertian(Parameter):
-    reflectance: float
+    reflectance: Annotated[float, {"title": "Reflectance"}]
 
 
 @dataclass
