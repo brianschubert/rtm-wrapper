@@ -66,6 +66,8 @@ class Parameter:
             )
         if typing.get_origin(attr_hints) is Annotated:
             return typing.get_args(attr_hints)[1]
+        else:
+            return {}
 
     def replace(self, **kwargs: Any) -> Parameter:
         duplicate = copy.deepcopy(self)
