@@ -38,6 +38,8 @@ class LocalMemoryExecutor(SweepExecutor, ABC):
         self._results = None
 
     def collect_results(self) -> xr.Dataset:
+        if self._results is None:
+            raise ValueError("no simulations have been run yet")
         return self._results
 
     def _allocate_results_like(self, sweep_grid: xr.DataArray) -> None:
