@@ -102,8 +102,8 @@ class AtmospherePredefined(Parameter):
 
 @dataclass
 class AtmosphereWaterOzone(Parameter):
-    water: float
-    ozone: float
+    water: Annotated[float, {"title": "Water Column", "unit": "g/cm^2"}]
+    ozone: Annotated[float, {"title": "Ozone Column", "unit": "cm-atm"}]
 
 
 @dataclass
