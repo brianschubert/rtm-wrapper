@@ -44,6 +44,7 @@ class Inputs(Parameter):
 
     wavelength: Parameter
 
+    # OLD INTERFACE
     # alt_sensor: Annotated[
     #     Union[float, Literal["sealevel", "satellite"]],
     #     "Sensor Altitude",
@@ -225,20 +226,9 @@ def _script2coords(
             if param_coordinates.ndim != 1:
                 dims += [f"{param_path}/{i}" for i in range(param_coordinates.ndim - 1)]
 
-            coords[param_path] = (dims, _pack_params(param_values), attrs)
+            coords[param_path] = (dims, param_coordinates, attrs)
 
     return coords
-
-
-def _pack_params(param_values: Any) -> np.ndarray:
-    return np.asarray(param_values)
-    # try:
-    #     dtype = np.dtype(hint)
-    #     return np.asarray(param_values, dtype=dtype)
-    # except TypeError:
-    #     arr = np.empty(len(param_values), dtype=object)
-    #     arr[...] = param_values
-    #     return arr
 
 
 def _is_special(name: str) -> bool:
