@@ -1,8 +1,9 @@
 """
 Misc utilities.
 """
-
+import importlib.metadata
 import logging.config
+import subprocess
 from typing import Callable, Hashable, TypeVar
 
 _T = TypeVar("_T", bound=Hashable)
@@ -64,3 +65,18 @@ def partition_dict(
             right_dict[key] = value
 
     return left_dict, right_dict
+
+
+def build_version() -> str:
+    base_version = importlib.metadata.version("rtm-wrapper")
+    try:
+        result = subprocess.run(
+            ["git", "rev-parse", "--short", "HEAD"],
+            text=True,
+            check=True,
+            capture_output=True,
+        )
+        build_commit = result.stdout
+        return f"{base_version}+{build_commit}"
+    except (FileNotFoundError, subprocess.SubprocessError):
+        return base_version
