@@ -7,10 +7,9 @@ import datetime
 import gzip
 import logging
 import pickle
-import platform
 import typing
 from abc import ABC
-from typing import Any, Callable, Literal
+from typing import Callable, Literal
 
 import numpy as np
 import xarray as xr
@@ -43,9 +42,10 @@ class LocalMemoryExecutor(SweepExecutor, ABC):
     def __init__(self) -> None:
         self._results = None
 
-    def run(self, inputs: SweepSimulation, engine: RTMEngine, **kwargs: Any) -> None:
+    def run(self, inputs: SweepSimulation, engine: RTMEngine) -> None:
         sim_start = datetime.datetime.now().astimezone().isoformat()
-        self._run(inputs, engine, **kwargs)
+        self._run(inputs, engine)
+        assert self._results is not None
         sim_end = datetime.datetime.now().astimezone().isoformat()
 
         engine_type = type(engine)
@@ -65,7 +65,7 @@ class LocalMemoryExecutor(SweepExecutor, ABC):
         )
 
     @abc.abstractmethod
-    def _run(self, inputs: SweepSimulation, engine: RTMEngine, **kwargs: Any) -> None:
+    def _run(self, inputs: SweepSimulation, engine: RTMEngine) -> None:
         ...
 
     def collect_results(self) -> xr.Dataset:
@@ -105,12 +105,13 @@ class SerialExecutor(LocalMemoryExecutor):
         step_callback: Callable[[tuple[int, ...]], None] | None = None,
     ) -> None:
         self._allocate_results_like(sweep.sweep_spec.grid)
+        assert self._results is not None
 
         with np.nditer(
             sweep.sweep_spec.grid.data, flags=["multi_index", "refs_ok"]
         ) as it:
             for inputs in it:
-                out = engine.run_simulation(inputs.item())
+                out = engine.run_simulation(inputs.item())  # type: ignore
                 for output_name in typing.get_type_hints(Outputs):
                     self._results.variables[output_name][it.multi_index] = getattr(
                         out, output_name
@@ -151,6 +152,7 @@ class ConcurrentExecutor(LocalMemoryExecutor):
     ) -> None:
         logger = logging.getLogger(__name__)
         self._allocate_results_like(sweep.sweep_spec.grid)
+        assert self._results is not None
 
         # Execute simulations in worker threads.
         # This is fast so long as the engine releases the GIL while running.

@@ -58,11 +58,12 @@ profile = "black"
 # mypy config.
 [tool.mypy]
 strict = true
+pretty = true
 
 [[tool.mypy.overrides]]
-module = "Py6S.*"
+module = ["Py6S.*", "matplotlib.*"]
 ignore_missing_imports = true
 
 [[tool.mypy.overrides]]
-module = "rtm_wrapper._6s"
+module = "rtm_wrapper.*"
 warn_return_any = false

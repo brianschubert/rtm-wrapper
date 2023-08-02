@@ -10,7 +10,7 @@ import xarray as xr
 from typing_extensions import TypeAlias
 
 from rtm_wrapper import util
-from rtm_wrapper.parameters import Parameter
+from rtm_wrapper.parameters import MetadataDict, Parameter
 
 InputParameterName: TypeAlias = Literal[
     "altitude_sensor",
@@ -151,7 +151,7 @@ class SweepSimulation:
         with np.nditer(
             self.sweep_spec.grid,
             flags=["multi_index", "refs_ok"],
-            op_flags=["writeonly"],
+            op_flags=["writeonly"],  # type: ignore
         ) as it:
             for x in it:
                 overrides = {
@@ -164,30 +164,30 @@ class SweepSimulation:
                             )
                         }
                     ).coords.items()
-                    if k.partition("__")[0] in input_names and "/" not in k
+                    if k.partition("__")[0] in input_names and "/" not in k  # type: ignore
                 }
-                x[...] = base.replace(**overrides)
+                x[...] = base.replace(**overrides)  # type: ignore
 
     @property
     def sweep_size(self) -> int:
-        return self.sweep_spec.grid.data.size
+        return self.sweep_spec.data_vars["grid"].data.size
 
     @property
     def sweep_shape(self) -> tuple[int, ...]:
-        return self.sweep_spec.grid.data.shape
+        return self.sweep_spec.data_vars["grid"].data.shape
 
 
-def _script2coords(
-    script: SweepScript,
-    base: Inputs,
-) -> dict[str, tuple[str, Sequence[Any], dict[str, Any]]]:
+_CoordsDict: TypeAlias = dict[str, tuple[Sequence[str], Sequence[Any], MetadataDict]]
+
+
+def _script2coords(script: SweepScript, base: Inputs) -> _CoordsDict:
     """
     Convert sweep script format to corresponding xarray coordinates.
 
     This function does not check the validity of the generated coordinates. We let
     xarray handle that on its own.
     """
-    coords = {}
+    coords: _CoordsDict = {}
     top_input_names = typing.get_args(InputParameterName)
 
     for sweep_name, sweep_spec in script.items():
@@ -208,9 +208,9 @@ def _script2coords(
             sweep_len = len(next(iter(sweep_parameters.values())))
 
             coords[sweep_name] = (
-                sweep_name,
+                (sweep_name,),
                 attribute_parts.get("__coords__", np.arange(sweep_len)),
-                {
+                {  # type: ignore
                     key[2:-2]: value
                     for key, value in attribute_parts.items()
                     if key != "__coords__"
@@ -229,7 +229,7 @@ def _script2coords(
             if param_coordinates.ndim != 1:
                 dims += [f"{param_path}/{i}" for i in range(param_coordinates.ndim - 1)]
 
-            coords[param_path] = (dims, param_coordinates, attrs)
+            coords[param_path] = (dims, param_coordinates, attrs)  # type: ignore
 
     return coords
 

@@ -12,7 +12,7 @@ import rtm_wrapper.util as rtm_util
 from rtm_wrapper.parameters import Parameter
 from rtm_wrapper.simulation import InputParameterName, Inputs, Outputs
 
-ParameterHandler: TypeAlias = Callable[[...], None]
+ParameterHandler: TypeAlias = Callable[..., None]
 
 
 class RTMEngine(abc.ABC):
@@ -38,7 +38,7 @@ class RTMEngine(abc.ABC):
             param_value = getattr(inputs, param_name)
             try:
                 handler = self.__class__.params.param_implementations[
-                    (param_name, type(param_value))
+                    (param_name, type(param_value))  # type: ignore
                 ]
             except KeyError as ex:
                 raise RuntimeError(
@@ -56,8 +56,10 @@ class ParameterRegistry:
     def __init__(self) -> None:
         self.param_implementations = {}
 
-    def register(self, name: InputParameterName, type_: type[Parameter] | None = None):
-        def _register(func: ParameterHandler) -> ParameterHandler:
+    def register(
+        self, name: InputParameterName, type_: type[Parameter] | None = None
+    ) -> Callable[[ParameterHandler], Callable[..., Never]]:
+        def _register(func: ParameterHandler) -> Callable[..., Never]:
             if type_ is None:
                 # Infer type from annotation of first positional argument.
 

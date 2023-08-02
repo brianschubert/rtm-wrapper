@@ -136,10 +136,10 @@ def _coords_with_dims(arr: xr.DataArray, dims: tuple[Hashable, ...]) -> list[Has
 
 
 def _coords_axes_label(coords: xr.DataArray, include_units: bool = True) -> str:
-    base_label = coords.attrs.get("title")
+    base_label: str | None = coords.attrs.get("title")
     if base_label is None:
         # Title missing OR set to None.
-        base_label = coords.name
+        base_label = str(coords.name)
     if include_units and coords.attrs.get("unit") is not None:
         # Unit exists and was not set to None.
         unit_str = coords.attrs["unit"].replace("-", r"\cdot{}")
