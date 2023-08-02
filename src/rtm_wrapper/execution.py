@@ -147,7 +147,7 @@ class ConcurrentExecutor(LocalMemoryExecutor):
         engine: RTMEngine,
         *,
         step_callback: Callable[[tuple[int, ...]], None] | None = None,
-        on_error: Literal["continue", "abort"] = "continue",
+        on_error: Literal["ignore", "abort"] = "abort",
     ) -> None:
         logger = logging.getLogger(__name__)
         self._allocate_results_like(sweep.sweep_spec.grid)
