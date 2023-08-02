@@ -57,17 +57,13 @@ def pysixs_default_inputs() -> Inputs:
 # TODO validation and error checking.
 
 
-@PySixSEngine.params.register("wavelength", rtm_param.WavelengthFixed)
-def _handle_wavelengthfixed(
-    inputs: rtm_param.WavelengthFixed, wrapper: Py6S.SixS
-) -> None:
+@PySixSEngine.params.register("wavelength")
+def _handle(inputs: rtm_param.WavelengthFixed, wrapper: Py6S.SixS) -> None:
     wrapper.wavelength = Py6S.Wavelength(inputs.value)
 
 
-@PySixSEngine.params.register("altitude_sensor", rtm_param.AltitudePredefined)
-def _handle_altitude_sensor_altitudepredefined(
-    inputs: rtm_param.AltitudePredefined, wrapper: Py6S.SixS
-) -> None:
+@PySixSEngine.params.register("altitude_sensor")
+def _handle(inputs: rtm_param.AltitudePredefined, wrapper: Py6S.SixS) -> None:
     if inputs.name == "sealevel":
         wrapper.altitudes.set_sensor_sea_level()
     elif inputs.name == "satellite":
@@ -76,17 +72,15 @@ def _handle_altitude_sensor_altitudepredefined(
         raise RuntimeError(f"bad parameter {inputs=}")
 
 
-@PySixSEngine.params.register("altitude_target", rtm_param.AltitudePredefined)
-def _handle_altitude_target_altitudepredefined(
-    inputs: rtm_param.AltitudePredefined, wrapper: Py6S.SixS
-) -> None:
+@PySixSEngine.params.register("altitude_target")
+def _handle(inputs: rtm_param.AltitudePredefined, wrapper: Py6S.SixS) -> None:
     if inputs.name == "sealevel":
         wrapper.altitudes.set_sensor_sea_level()
     else:
         raise RuntimeError(f"bad parameter {inputs=}")
 
 
-@PySixSEngine.params.register("atmosphere", rtm_param.AtmospherePredefined)
+@PySixSEngine.params.register("atmosphere")
 def _handle(inputs: rtm_param.AtmospherePredefined, wrapper: Py6S.SixS) -> None:
     atmos_profile = getattr(Py6S.AtmosProfile, inputs.name)
     wrapper.atmos_profile = Py6S.AtmosProfile.PredefinedType(atmos_profile)
@@ -99,15 +93,13 @@ def _handle(inputs: rtm_param.AtmosphereWaterOzone, wrapper: Py6S.SixS) -> None:
     )
 
 
-@PySixSEngine.params.register("aerosol_profile", rtm_param.AerosolProfilePredefined)
+@PySixSEngine.params.register("aerosol_profile")
 def _handle(inputs: rtm_param.AerosolProfilePredefined, wrapper: Py6S.SixS) -> None:
     aero_profile = getattr(Py6S.AeroProfile, inputs.name)
     wrapper.aero_profile = Py6S.AeroProfile.PredefinedType(aero_profile)
 
 
-@PySixSEngine.params.register(
-    "ground", rtm_param.GroundReflectanceHomogenousUniformLambertian
-)
+@PySixSEngine.params.register("ground")
 def _handle(
     inputs: rtm_param.GroundReflectanceHomogenousUniformLambertian, wrapper: Py6S.SixS
 ) -> None:
@@ -116,9 +108,7 @@ def _handle(
     )
 
 
-@PySixSEngine.params.register(
-    "ground", rtm_param.GroundReflectanceHeterogeneousLambertian
-)
+@PySixSEngine.params.register("ground")
 def _handle(
     inputs: rtm_param.GroundReflectanceHeterogeneousLambertian, wrapper: Py6S.SixS
 ) -> None:

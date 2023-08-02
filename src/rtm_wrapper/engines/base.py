@@ -2,10 +2,13 @@ from __future__ import annotations
 
 import abc
 import dataclasses
+import inspect
+import typing
 from typing import Any, Callable, ClassVar
 
-from typing_extensions import TypeAlias
+from typing_extensions import Never, TypeAlias
 
+import rtm_wrapper.util as rtm_util
 from rtm_wrapper.parameters import Parameter
 from rtm_wrapper.simulation import InputParameterName, Inputs, Outputs
 
@@ -53,9 +56,40 @@ class ParameterRegistry:
     def __init__(self) -> None:
         self.param_implementations = {}
 
-    def register(self, name: InputParameterName, type_: type[Parameter]):
+    def register(self, name: InputParameterName, type_: type[Parameter] | None = None):
         def _register(func: ParameterHandler) -> ParameterHandler:
-            self.param_implementations[(name, type_)] = func
-            return func
+            if type_ is None:
+                # Infer type from annotation of first positional argument.
+
+                first_param = rtm_util.first_or(inspect.signature(func).parameters)
+                if first_param is None:
+                    raise ValueError(
+                        "decorated function must accept at least one positional argument"
+                    )
+
+                hints = typing.get_type_hints(func)
+                try:
+                    param_type = hints[first_param]
+                except KeyError:
+                    raise ValueError(
+                        "first argument of decorator function is missing an annotation"
+                    )
+            else:
+                param_type = type_
+
+            if not issubclass(param_type, Parameter):
+                raise ValueError(
+                    f"parameter must be a Parameter subclass, got {param_type}"
+                )
+
+            self.param_implementations[(name, param_type)] = func
+            return _dont_call_parameter_handler
 
         return _register
+
+
+def _dont_call_parameter_handler(*_args: Any, **_kwargs: Any) -> Never:
+    raise RuntimeError(
+        "parameter handler should not be called directly. Access the handler "
+        "through corresponding engine's ParameterRegistry"
+    )

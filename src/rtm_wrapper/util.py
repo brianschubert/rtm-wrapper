@@ -1,14 +1,16 @@
 """
 Misc utilities.
 """
+from __future__ import annotations
+
 import importlib.metadata
 import logging.config
 import platform
 import subprocess
-from typing import Callable, Hashable, TypeVar
+from typing import Callable, Hashable, Iterable, TypeVar
 
-_T = TypeVar("_T", bound=Hashable)
-_V = TypeVar("_V")
+_T = TypeVar("_T")
+_H = TypeVar("_H", bound=Hashable)
 
 
 def setup_debug_root_logging(level: int = logging.NOTSET) -> None:
@@ -48,8 +50,8 @@ def setup_debug_root_logging(level: int = logging.NOTSET) -> None:
 
 
 def partition_dict(
-    dictionary: dict[_T, _V], predicate: Callable[[_T], bool]
-) -> tuple[dict[_T, _V], dict[_T, _V]]:
+    dictionary: dict[_H, _T], predicate: Callable[[_H], bool]
+) -> tuple[dict[_H, _T], dict[_H, _T]]:
     """
     Partition the given dictionary based on the provided predicate.
 
@@ -85,3 +87,10 @@ def build_version() -> str:
 
 def platform_summary() -> str:
     return f"{platform.python_implementation()} {platform.python_version()} ({' '.join(platform.uname())})"
+
+
+def first_or(iterable: Iterable[_T], default: _T | None = None) -> _T | None:
+    try:
+        return next(iter(iterable))
+    except StopIteration:
+        return default
