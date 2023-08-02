@@ -1,14 +1,103 @@
 from __future__ import annotations
 
+import copy
 import typing
 from dataclasses import dataclass
 from typing import Literal, TypedDict
 
 import numpy as np
+import Py6S
 import Py6S.outputs as sixs_outputs
 from nptyping import Float, Int, NDArray, Object, Structure
-from Py6S import SixS
 from typing_extensions import TypeAlias
+
+from rtm_wrapper.engines.base import RTMEngine
+from rtm_wrapper.simulation import Inputs, Outputs
+
+
+class PySixSEngine(RTMEngine):
+    _base_wrapper: Py6S.SixS
+
+    def __init__(self, wrapper: Py6S.SixS | None = None) -> None:
+        if wrapper is None:
+            wrapper = make_sixs_wrapper()
+        if wrapper.sixs_path is None:
+            raise ValueError("misconfigured wrapper - sixs_path not defined")
+        self._base_wrapper = wrapper
+
+    def run_simulation(self, inputs: Inputs) -> Outputs:
+        wrapper = copy.deepcopy(self._base_wrapper)
+
+        # TODO validation and error checking.
+
+        # Configure altitudes.
+        if inputs.alt_sensor == "sealevel":
+            wrapper.altitudes.set_sensor_sea_level()
+        elif inputs.alt_sensor == "satellite":
+            wrapper.altitudes.set_sensor_satellite_level()
+        else:
+            wrapper.altitudes.set_sensor_custom_altitude(inputs.alt_sensor)
+
+        if inputs.alt_target == "sealevel":
+            wrapper.altitudes.set_target_sea_level()
+        else:
+            wrapper.altitudes.set_target_custom_altitude(inputs.alt_target)
+
+        # Configure atmosphere profile.
+        if isinstance(inputs.atmosphere, str):
+            atmos_profile = getattr(Py6S.AtmosProfile, inputs.atmosphere)
+            wrapper.atmos_profile = Py6S.AtmosProfile.PredefinedType(atmos_profile)
+        else:
+            wrapper.atmos_profile = Py6S.AtmosProfile.UserWaterAndOzone(
+                *inputs.atmosphere
+            )
+
+        # Configure aerosol profile.
+        aero_profile = getattr(Py6S.AeroProfile, inputs.aerosol_profile)
+        if inputs.aerosol_aot is None:
+            wrapper.aero_profile = Py6S.AeroProfile.PredefinedType(aero_profile)
+        else:
+            wrapper.aero_profile = Py6S.AeroProfile.UserProfile(aero_profile)
+            for layer in inputs.aerosol_aot:
+                wrapper.aero_profile.add_layer(*layer)
+
+        # Configure ground reflectance.
+        wrapper.ground_reflectance = Py6S.GroundReflectance.HeterogeneousLambertian(
+            radius=0.5,
+            ro_target=inputs.refl_target,
+            ro_env=inputs.refl_background,
+        )
+
+        # Configure wavelength.
+        wrapper.wavelength = Py6S.Wavelength(inputs.wavelength)
+
+        wrapper.run()
+
+        return Outputs(
+            **{
+                output_name: wrapper.outputs.values[output_name]
+                for output_name in typing.get_type_hints(Outputs)
+            }
+        )
+
+
+def pysixs_default_inputs() -> Inputs:
+    """
+    Return input parameters that replicate Py6S's defaults.
+    """
+    return Inputs(
+        alt_sensor="sealevel",
+        alt_target="sealevel",
+        atmosphere="MidlatitudeSummer",
+        aerosol_profile="Maritime",
+        aerosol_aot=None,
+        refl_background=0.3,
+        refl_target=0.3,
+        wavelength=0.5,
+    )
+
+
+# Original helpers below.
 
 _TransmittanceName: TypeAlias = Literal[
     "aerosol_scattering",
@@ -39,11 +128,11 @@ _RatName: TypeAlias = Literal[
     "single_scattering_albedo",
     "spherical_albedo",
 ]
-
 _TransmittanceDict: TypeAlias = dict[_TransmittanceName, sixs_outputs.Transmittance]
-_RatDict: TypeAlias = dict[_RatName, sixs_outputs.RayleighAerosolTotal]
 
+_RatDict: TypeAlias = dict[_RatName, sixs_outputs.RayleighAerosolTotal]
 _FloatArray: TypeAlias = NDArray[Literal["*"], Float]
+
 _IntArray: TypeAlias = NDArray[Literal["*"], Int]
 
 _TransmittanceArray: TypeAlias = NDArray[
@@ -262,7 +351,7 @@ class Py6SDenseOutput:
         ) / np.pi
 
 
-def make_sixs_wrapper() -> SixS:
+def make_sixs_wrapper() -> Py6S.SixS:
     try:
         import sixs_bin
 
@@ -272,7 +361,7 @@ def make_sixs_wrapper() -> SixS:
         pass
 
     # Let Py6s try finding 6S on PATH.
-    s = SixS()
+    s = Py6S.SixS()
 
     if s.sixs_path is None:
         raise RuntimeError(
