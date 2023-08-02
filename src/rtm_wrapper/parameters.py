@@ -80,12 +80,22 @@ class AltitudePredefined(Parameter):
 
 @dataclass
 class AltitudeKilometers(Parameter):
-    value: float
+    value: Annotated[float, {"title": "Altitude"}]
 
 
 @dataclass
 class AtmospherePredefined(Parameter):
-    name: Literal["MidlatitudeSummer"]
+    name: Annotated[
+        Literal[
+            "NoGaseousAbsorption",
+            "Tropical",
+            "MidlatitudeSummer",
+            "MidlatitudeWinter",
+            "SubarcticSummer",
+            "SubarcticWinter",
+        ],
+        {"title": "Atmosphere Profile"},
+    ]
 
 
 @dataclass

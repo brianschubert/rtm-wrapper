@@ -28,7 +28,7 @@ def plot_sweep_single(
             f"got ndim={sweep_variable.ndim} (after squeezing)"
         )
 
-    (sweep_dim,) = sweep_variable.dims
+    (sweep_dim,) = sweep_variable.indexes.dims
 
     sweep_coords = sweep_variable.coords[sweep_dim]
 
@@ -58,7 +58,7 @@ def plot_sweep_legend(
             f"got ndim={sweep_variable.ndim} (after squeezing)"
         )
 
-    legend_dim, axes_dim = sweep_variable.dims
+    legend_dim, axes_dim = sweep_variable.indexes.dims
 
     legend_coords = sweep_variable.coords[legend_dim]
     axes_coords = sweep_variable.coords[axes_dim]
@@ -96,7 +96,7 @@ def plot_sweep_grid(
             f"got ndim={sweep_variable.ndim} (after squeezing)"
         )
 
-    grid_y_dim, grid_x_dim, axes_dim = sweep_variable.dims
+    grid_y_dim, grid_x_dim, axes_dim = sweep_variable.indexes.dims
 
     grid_y_coords = sweep_variable.coords[grid_y_dim]
     grid_x_coords = sweep_variable.coords[grid_x_dim]
@@ -118,10 +118,12 @@ def plot_sweep_grid(
 
     y_prefix = _coords_axes_label(grid_y_coords, include_units=False)
     for ax, label in zip(axs[:, 0], grid_y_coords.values):
-        ax.set_ylabel(f"{y_prefix}={label}")
+        sep = "=" if len(y_prefix) + len(label) < 18 else "=\n"
+        ax.set_ylabel(f"{y_prefix}{sep}{label}")
     x_prefix = _coords_axes_label(grid_x_coords, include_units=False)
     for ax, label in zip(axs[0, :], grid_x_coords.values):
-        ax.set_title(f"{x_prefix}={label}")
+        sep = "=" if len(x_prefix) + len(label) < 18 else "=\n"
+        ax.set_title(f"{x_prefix}{sep}{label}")
 
     fig.supxlabel(_coords_axes_label(axes_coords))
     fig.supylabel(_coords_axes_label(sweep_variable))
