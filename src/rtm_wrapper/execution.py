@@ -1,15 +1,21 @@
 from __future__ import annotations
 
 import abc
+import base64
 import concurrent.futures
+import datetime
+import gzip
 import logging
+import pickle
+import time
 import typing
 from abc import ABC
-from typing import Callable, Literal
+from typing import Any, Callable, Literal
 
 import numpy as np
 import xarray as xr
 
+import rtm_wrapper.util as rtm_util
 from rtm_wrapper.engines.base import RTMEngine
 from rtm_wrapper.simulation import Outputs, SweepSimulation
 
@@ -18,7 +24,7 @@ class SweepExecutor(abc.ABC):
     """Base class for simulation executors."""
 
     @abc.abstractmethod
-    def run(self, inputs: SweepSimulation, engine: RTMEngine):
+    def run(self, inputs: SweepSimulation, engine: RTMEngine) -> None:
         ...
 
     @abc.abstractmethod
@@ -36,6 +42,34 @@ class LocalMemoryExecutor(SweepExecutor, ABC):
 
     def __init__(self) -> None:
         self._results = None
+
+    def run(
+        self, inputs: SweepSimulation, engine: RTMEngine, *args: Any, **kwargs: Any
+    ) -> None:
+        sim_start = datetime.datetime.now().astimezone().isoformat()
+        self._run(inputs, engine, *args, **kwargs)
+        sim_end = datetime.datetime.now().astimezone().isoformat()
+
+        engine_type = type(engine)
+        # Populate metadata attributes
+        self._results = self._results.assign_attrs(
+            {
+                "version": rtm_util.build_version(),
+                "engine": f"{engine_type.__module__}.{engine_type.__qualname__}",
+                "base_repr": repr(inputs.base),
+                "base_pzb64": base64.b64encode(
+                    gzip.compress(pickle.dumps(inputs.base))
+                ).decode(),
+                "sim_start": sim_start,
+                "sim_end": sim_end,
+            }
+        )
+
+    @abc.abstractmethod
+    def _run(
+        self, inputs: SweepSimulation, engine: RTMEngine, *args: Any, **kwargs: Any
+    ) -> None:
+        ...
 
     def collect_results(self) -> xr.Dataset:
         if self._results is None:
@@ -66,12 +100,12 @@ class LocalMemoryExecutor(SweepExecutor, ABC):
 class SerialExecutor(LocalMemoryExecutor):
     """Executor that runs simulations in series."""
 
-    def run(
+    def _run(
         self,
         sweep: SweepSimulation,
         engine: RTMEngine,
         step_callback: Callable[[tuple[int, ...]], None] | None = None,
-    ):
+    ) -> None:
         self._allocate_results_like(sweep.sweep_spec)
 
         with np.nditer(sweep.sweep_spec.data, flags=["multi_index", "refs_ok"]) as it:
@@ -107,13 +141,13 @@ class ConcurrentExecutor(LocalMemoryExecutor):
         super().__init__()
         self._max_workers = max_workers
 
-    def run(
+    def _run(
         self,
         sweep: SweepSimulation,
         engine: RTMEngine,
         step_callback: Callable[[tuple[int, ...]], None] | None = None,
         on_error: Literal["continue", "abort"] = "continue",
-    ):
+    ) -> None:
         logger = logging.getLogger(__name__)
         self._allocate_results_like(sweep.sweep_spec.grid)
 
