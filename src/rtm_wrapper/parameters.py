@@ -7,9 +7,15 @@ from __future__ import annotations
 import copy
 import typing
 from dataclasses import dataclass
-from typing import Annotated, Any, Literal
+from typing import Annotated, Any, Literal, TypedDict
 
 import numpy as np
+from typing_extensions import NotRequired
+
+
+class MetadataDict(TypedDict):
+    title: NotRequired[str]
+    unit: NotRequired[str]
 
 
 class Parameter:
@@ -46,11 +52,11 @@ class Parameter:
                     )
             setattr(self, current_attr, value)
 
-    def get_metadata(self, param_path: str) -> dict[str, Any]:
+    def get_metadata(self, param_path: str) -> MetadataDict:
         current_attr, _sep, sub_param_path = param_path.partition("__")
         if sub_param_path:
             try:
-                sub_param = getattr(self, current_attr)
+                sub_param: Parameter = getattr(self, current_attr)
             except AttributeError:
                 raise AttributeError(
                     f"unable to resolve sub-parameter '{current_attr}' on {self.__class__.__name__}"
@@ -65,7 +71,8 @@ class Parameter:
                 f"unable to resolve terminal parameter '{current_attr}' on {self.__class__.__name__}"
             )
         if typing.get_origin(attr_hints) is Annotated:
-            return typing.get_args(attr_hints)[1]
+            metadata: MetadataDict = typing.get_args(attr_hints)[1]
+            return metadata
         else:
             return {}
 
