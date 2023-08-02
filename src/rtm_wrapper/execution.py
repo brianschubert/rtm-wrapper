@@ -43,11 +43,9 @@ class LocalMemoryExecutor(SweepExecutor, ABC):
     def __init__(self) -> None:
         self._results = None
 
-    def run(
-        self, inputs: SweepSimulation, engine: RTMEngine, *args: Any, **kwargs: Any
-    ) -> None:
+    def run(self, inputs: SweepSimulation, engine: RTMEngine, **kwargs: Any) -> None:
         sim_start = datetime.datetime.now().astimezone().isoformat()
-        self._run(inputs, engine, *args, **kwargs)
+        self._run(inputs, engine, **kwargs)
         sim_end = datetime.datetime.now().astimezone().isoformat()
 
         engine_type = type(engine)
@@ -67,9 +65,7 @@ class LocalMemoryExecutor(SweepExecutor, ABC):
         )
 
     @abc.abstractmethod
-    def _run(
-        self, inputs: SweepSimulation, engine: RTMEngine, *args: Any, **kwargs: Any
-    ) -> None:
+    def _run(self, inputs: SweepSimulation, engine: RTMEngine, **kwargs: Any) -> None:
         ...
 
     def collect_results(self) -> xr.Dataset:
@@ -105,6 +101,7 @@ class SerialExecutor(LocalMemoryExecutor):
         self,
         sweep: SweepSimulation,
         engine: RTMEngine,
+        *,
         step_callback: Callable[[tuple[int, ...]], None] | None = None,
     ) -> None:
         self._allocate_results_like(sweep.sweep_spec)
@@ -146,6 +143,7 @@ class ConcurrentExecutor(LocalMemoryExecutor):
         self,
         sweep: SweepSimulation,
         engine: RTMEngine,
+        *,
         step_callback: Callable[[tuple[int, ...]], None] | None = None,
         on_error: Literal["continue", "abort"] = "continue",
     ) -> None:
