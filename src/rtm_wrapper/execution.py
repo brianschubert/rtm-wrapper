@@ -5,7 +5,7 @@ import concurrent.futures
 import logging
 import typing
 from abc import ABC
-from typing import Callable
+from typing import Callable, Literal
 
 import numpy as np
 import xarray as xr
@@ -70,9 +70,9 @@ class SerialExecutor(LocalMemoryExecutor):
         engine: RTMEngine,
         step_callback: Callable[[tuple[int, ...]], None] | None = None,
     ):
-        self._allocate_results_like(sweep.sweep_grid)
+        self._allocate_results_like(sweep.sweep_spec)
 
-        with np.nditer(sweep.sweep_grid.data, flags=["multi_index", "refs_ok"]) as it:
+        with np.nditer(sweep.sweep_spec.data, flags=["multi_index", "refs_ok"]) as it:
             for inputs in it:
                 out = engine.run_simulation(inputs.item())
                 for output_name in typing.get_type_hints(Outputs):
@@ -110,9 +110,10 @@ class ConcurrentExecutor(LocalMemoryExecutor):
         sweep: SweepSimulation,
         engine: RTMEngine,
         step_callback: Callable[[tuple[int, ...]], None] | None = None,
+        on_error: Literal["continue", "abort"] = "continue",
     ):
         logger = logging.getLogger(__name__)
-        self._allocate_results_like(sweep.sweep_grid)
+        self._allocate_results_like(sweep.sweep_spec.grid)
 
         # Execute simulations in worker threads.
         # This is fast so long as the engine releases the GIL while running.
@@ -121,7 +122,7 @@ class ConcurrentExecutor(LocalMemoryExecutor):
         ) as executor:
             futures_to_index = {
                 executor.submit(
-                    lambda idx: engine.run_simulation(sweep.sweep_grid.data[idx]),
+                    lambda idx: engine.run_simulation(sweep.sweep_spec.grid.data[idx]),
                     idx,
                 ): idx
                 for idx in np.ndindex(sweep.sweep_shape)
@@ -136,12 +137,14 @@ class ConcurrentExecutor(LocalMemoryExecutor):
                             out, output_name
                         )
                 except Exception as ex:
-                    error_input = sweep.sweep_grid.data[idx]
+                    error_input = sweep.sweep_spec.grid.data[idx]
                     logger.error(
                         "exception occurred when running simulation with input=%r, idx=%r",
                         error_input,
                         idx,
                         exc_info=ex,
                     )
+                    if on_error == "abort":
+                        raise
                 if step_callback is not None:
                     step_callback(idx)
