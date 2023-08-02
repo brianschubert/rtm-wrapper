@@ -125,6 +125,8 @@ class SweepSimulation:
 
     sweep_spec: xr.Dataset
 
+    base: Inputs
+
     def __init__(self, script: SweepScript, base: Inputs) -> None:
         sweep_coords = _script2coords(script, base)
         input_names = typing.get_type_hints(Inputs).keys()
@@ -143,6 +145,7 @@ class SweepSimulation:
                 np.empty(tuple(sweep_dims.values()), dtype=object),
             )
         )
+        self.base = base
 
         # Populate sweep grid with input combinations.
         with np.nditer(
