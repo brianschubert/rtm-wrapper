@@ -122,44 +122,55 @@ class SweepSimulation:
     Temporary / unstable representation.
     """
 
-    sweep_grid: xr.DataArray
+    sweep_spec: xr.Dataset
 
     def __init__(self, script: SweepScript, base: Inputs) -> None:
         sweep_coords = _script2coords(script, base)
         input_names = typing.get_type_hints(Inputs).keys()
 
         # TODO maybe tidy.
+        # TODO update outdated comment below
         # We create an intermediate empty dataset to validate the sweep coordinates
         # and to resolve the dimension sizes.
         # Unfortunately, while xr.DataArray supports the creation of empty/default-filled
         # arrays, it breaks when there are dimensions without coordinates.
         resolve_dataset = xr.Dataset(coords=sweep_coords)
-        self.sweep_grid = xr.DataArray(
-            np.empty(tuple(resolve_dataset.dims.values()), dtype=object),
-            coords=resolve_dataset.coords,
+        sweep_dims = resolve_dataset.indexes.dims
+        self.sweep_spec = resolve_dataset.assign(
+            grid=(
+                tuple(sweep_dims.keys()),
+                np.empty(tuple(sweep_dims.values()), dtype=object),
+            )
         )
 
         # Populate sweep grid with input combinations.
         with np.nditer(
-            self.sweep_grid,
+            self.sweep_spec.grid,
             flags=["multi_index", "refs_ok"],
             op_flags=["writeonly"],
         ) as it:
             for x in it:
                 overrides = {
-                    k: v.item()
-                    for k, v in self.sweep_grid[it.multi_index].coords.items()
-                    if k.partition("__")[0] in input_names
+                    k: v.item() if v.size == 1 else v.squeeze()
+                    for k, v in self.sweep_spec.isel(
+                        {
+                            dim: index
+                            for dim, index in zip(
+                                self.sweep_spec.grid.dims, it.multi_index
+                            )
+                        }
+                    ).coords.items()
+                    if k.partition("__")[0] in input_names and "/" not in k
                 }
                 x[...] = base.replace(**overrides)
 
     @property
     def sweep_size(self) -> int:
-        return self.sweep_grid.data.size
+        return self.sweep_spec.grid.data.size
 
     @property
     def sweep_shape(self) -> tuple[int, ...]:
-        return self.sweep_grid.data.shape
+        return self.sweep_spec.grid.data.shape
 
 
 def _script2coords(
@@ -209,7 +220,12 @@ def _script2coords(
             # TODO parameter path validation and uniqueness checking?
             attrs = base.get_metadata(param_path)
 
-            coords[param_path] = (sweep_name, _pack_params(param_values), attrs)
+            param_coordinates = np.asarray(param_values)
+            dims = [sweep_name]
+            if param_coordinates.ndim != 1:
+                dims += [f"{param_path}/{i}" for i in range(param_coordinates.ndim - 1)]
+
+            coords[param_path] = (dims, _pack_params(param_values), attrs)
 
     return coords
 
