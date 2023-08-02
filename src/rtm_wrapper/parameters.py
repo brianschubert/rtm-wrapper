@@ -106,7 +106,7 @@ class AerosolProfilePredefined(Parameter):
 
 @dataclass
 class GroundReflectanceHomogenousUniformLambertian(Parameter):
-    ground: float
+    reflectance: float
 
 
 @dataclass
