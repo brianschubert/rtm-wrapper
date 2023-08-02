@@ -3,6 +3,7 @@ Misc utilities.
 """
 import importlib.metadata
 import logging.config
+import platform
 import subprocess
 from typing import Callable, Hashable, TypeVar
 
@@ -80,3 +81,7 @@ def build_version() -> str:
         return f"{base_version}+{build_commit}"
     except (FileNotFoundError, subprocess.SubprocessError):
         return base_version
+
+
+def platform_summary() -> str:
+    return f"{platform.python_implementation()} {platform.python_version()} ({' '.join(platform.uname())})"

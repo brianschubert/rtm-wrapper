@@ -7,7 +7,7 @@ import datetime
 import gzip
 import logging
 import pickle
-import time
+import platform
 import typing
 from abc import ABC
 from typing import Any, Callable, Literal
@@ -55,6 +55,7 @@ class LocalMemoryExecutor(SweepExecutor, ABC):
         self._results = self._results.assign_attrs(
             {
                 "version": rtm_util.build_version(),
+                "platform": rtm_util.platform_summary(),
                 "engine": f"{engine_type.__module__}.{engine_type.__qualname__}",
                 "base_repr": repr(inputs.base),
                 "base_pzb64": base64.b64encode(
