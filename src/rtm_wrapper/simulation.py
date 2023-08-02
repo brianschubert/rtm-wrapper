@@ -194,13 +194,16 @@ def _script2coords(
             param_type, param_title, param_unit = typing.get_args(
                 input_hints[param_name]
             )
+            attrs = {}
+            if param_title is not None:
+                attrs["title"] = param_title
+            if param_unit is not None:
+                attrs["unit"] = param_unit
+
             coords[param_name] = (
                 sweep_name,
                 _pack_params(param_values, param_type),
-                {
-                    "title": param_title,
-                    "unit": param_unit,
-                },
+                attrs,
             )
 
     return coords
