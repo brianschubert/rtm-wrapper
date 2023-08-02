@@ -11,6 +11,7 @@ import Py6S.outputs as sixs_outputs
 from nptyping import Float, Int, NDArray, Object, Structure
 from typing_extensions import TypeAlias
 
+import rtm_wrapper.parameters as rtm_param
 from rtm_wrapper.engines.base import RTMEngine
 from rtm_wrapper.simulation import Inputs, Outputs
 
@@ -27,49 +28,7 @@ class PySixSEngine(RTMEngine):
 
     def run_simulation(self, inputs: Inputs) -> Outputs:
         wrapper = copy.deepcopy(self._base_wrapper)
-
-        # TODO validation and error checking.
-
-        # Configure altitudes.
-        if inputs.alt_sensor == "sealevel":
-            wrapper.altitudes.set_sensor_sea_level()
-        elif inputs.alt_sensor == "satellite":
-            wrapper.altitudes.set_sensor_satellite_level()
-        else:
-            wrapper.altitudes.set_sensor_custom_altitude(inputs.alt_sensor)
-
-        if inputs.alt_target == "sealevel":
-            wrapper.altitudes.set_target_sea_level()
-        else:
-            wrapper.altitudes.set_target_custom_altitude(inputs.alt_target)
-
-        # Configure atmosphere profile.
-        if isinstance(inputs.atmosphere, str):
-            atmos_profile = getattr(Py6S.AtmosProfile, inputs.atmosphere)
-            wrapper.atmos_profile = Py6S.AtmosProfile.PredefinedType(atmos_profile)
-        else:
-            wrapper.atmos_profile = Py6S.AtmosProfile.UserWaterAndOzone(
-                *inputs.atmosphere
-            )
-
-        # Configure aerosol profile.
-        aero_profile = getattr(Py6S.AeroProfile, inputs.aerosol_profile)
-        if inputs.aerosol_aot is None:
-            wrapper.aero_profile = Py6S.AeroProfile.PredefinedType(aero_profile)
-        else:
-            wrapper.aero_profile = Py6S.AeroProfile.UserProfile(aero_profile)
-            for layer in inputs.aerosol_aot:
-                wrapper.aero_profile.add_layer(*layer)
-
-        # Configure ground reflectance.
-        wrapper.ground_reflectance = Py6S.GroundReflectance.HeterogeneousLambertian(
-            radius=0.5,
-            ro_target=inputs.refl_target,
-            ro_env=inputs.refl_background,
-        )
-
-        # Configure wavelength.
-        wrapper.wavelength = Py6S.Wavelength(inputs.wavelength)
+        self.load_inputs(inputs, wrapper)
 
         wrapper.run()
 
@@ -86,14 +45,74 @@ def pysixs_default_inputs() -> Inputs:
     Return input parameters that replicate Py6S's defaults.
     """
     return Inputs(
-        alt_sensor="sealevel",
-        alt_target="sealevel",
-        atmosphere="MidlatitudeSummer",
-        aerosol_profile="Maritime",
-        aerosol_aot=None,
-        refl_background=0.3,
-        refl_target=0.3,
-        wavelength=0.5,
+        altitude_sensor=rtm_param.AltitudePredefined("sealevel"),
+        altitude_target=rtm_param.AltitudePredefined("sealevel"),
+        atmosphere=rtm_param.AtmospherePredefined("MidlatitudeSummer"),
+        aerosol_profile=rtm_param.AerosolProfilePredefined("Maritime"),
+        ground=rtm_param.GroundReflectanceHomogenousUniformLambertian(0.3),
+        wavelength=rtm_param.WavelengthFixed(0.5),
+    )
+
+
+# TODO validation and error checking.
+
+
+@PySixSEngine.params.register("wavelength", rtm_param.WavelengthFixed)
+def _handle_wavelengthfixed(
+    inputs: rtm_param.WavelengthFixed, wrapper: Py6S.SixS
+) -> None:
+    wrapper.wavelength = Py6S.Wavelength(inputs.value)
+
+
+@PySixSEngine.params.register("altitude_sensor", rtm_param.AltitudePredefined)
+def _handle_altitude_sensor_altitudepredefined(
+    inputs: rtm_param.AltitudePredefined, wrapper: Py6S.SixS
+) -> None:
+    if inputs.name == "sealevel":
+        wrapper.altitudes.set_sensor_sea_level()
+    elif inputs.name == "satellite":
+        wrapper.altitudes.set_sensor_satellite_level()
+    else:
+        raise RuntimeError(f"bad parameter {inputs=}")
+
+
+@PySixSEngine.params.register("altitude_target", rtm_param.AltitudePredefined)
+def _handle_altitude_target_altitudepredefined(
+    inputs: rtm_param.AltitudePredefined, wrapper: Py6S.SixS
+) -> None:
+    if inputs.name == "sealevel":
+        wrapper.altitudes.set_sensor_sea_level()
+    else:
+        raise RuntimeError(f"bad parameter {inputs=}")
+
+
+@PySixSEngine.params.register("atmosphere", rtm_param.AtmospherePredefined)
+def _handle(inputs: rtm_param.AtmospherePredefined, wrapper: Py6S.SixS) -> None:
+    atmos_profile = getattr(Py6S.AtmosProfile, inputs.name)
+    wrapper.atmos_profile = Py6S.AtmosProfile.PredefinedType(atmos_profile)
+
+
+@PySixSEngine.params.register("atmosphere", rtm_param.AtmosphereWaterOzone)
+def _handle(inputs: rtm_param.AtmosphereWaterOzone, wrapper: Py6S.SixS) -> None:
+    wrapper.atmos_profile = Py6S.AtmosProfile.UserWaterAndOzone(
+        inputs.water, inputs.ozone
+    )
+
+
+@PySixSEngine.params.register("aerosol_profile", rtm_param.AerosolProfilePredefined)
+def _handle(inputs: rtm_param.AerosolProfilePredefined, wrapper: Py6S.SixS) -> None:
+    aero_profile = getattr(Py6S.AeroProfile, inputs.name)
+    wrapper.aero_profile = Py6S.AeroProfile.PredefinedType(aero_profile)
+
+
+@PySixSEngine.params.register(
+    "ground", rtm_param.GroundReflectanceHomogenousUniformLambertian
+)
+def _handle(
+    inputs: rtm_param.GroundReflectanceHomogenousUniformLambertian, wrapper: Py6S.SixS
+) -> None:
+    wrapper.ground_reflectance = Py6S.GroundReflectance.HomogeneousLambertian(
+        inputs.ground
     )
 
 
