@@ -104,9 +104,11 @@ class SerialExecutor(LocalMemoryExecutor):
         *,
         step_callback: Callable[[tuple[int, ...]], None] | None = None,
     ) -> None:
-        self._allocate_results_like(sweep.sweep_spec)
+        self._allocate_results_like(sweep.sweep_spec.grid)
 
-        with np.nditer(sweep.sweep_spec.data, flags=["multi_index", "refs_ok"]) as it:
+        with np.nditer(
+            sweep.sweep_spec.grid.data, flags=["multi_index", "refs_ok"]
+        ) as it:
             for inputs in it:
                 out = engine.run_simulation(inputs.item())
                 for output_name in typing.get_type_hints(Outputs):
