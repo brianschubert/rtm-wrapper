@@ -5,7 +5,7 @@ import concurrent.futures
 import logging
 import typing
 from abc import ABC
-from typing import Callable
+from typing import Callable, Literal
 
 import numpy as np
 import xarray as xr
@@ -110,6 +110,7 @@ class ConcurrentExecutor(LocalMemoryExecutor):
         sweep: SweepSimulation,
         engine: RTMEngine,
         step_callback: Callable[[tuple[int, ...]], None] | None = None,
+        on_error: Literal["continue", "abort"] = "continue",
     ):
         logger = logging.getLogger(__name__)
         self._allocate_results_like(sweep.sweep_grid)
@@ -143,5 +144,7 @@ class ConcurrentExecutor(LocalMemoryExecutor):
                         idx,
                         exc_info=ex,
                     )
+                    if on_error == "abort":
+                        raise
                 if step_callback is not None:
                     step_callback(idx)
