@@ -60,66 +60,6 @@ class Inputs(Parameter):
 
     wavelength: Parameter
 
-    # OLD INTERFACE
-    # alt_sensor: Annotated[
-    #     Union[float, Literal["sealevel", "satellite"]],
-    #     "Sensor Altitude",
-    #     "kilometers",
-    # ]
-    # """Altitude of sensor. Either predefined or km the open interval (0, 100)."""
-    #
-    # # TODO verify that any target altitude really is allowable.
-    # alt_target: Annotated[
-    #     Union[float, Literal["sealevel"]], "Target Altitude", "kilometers"
-    # ]
-    # """
-    # Altitude of target. Either predefined or km (any non-negative float).
-    # """
-    #
-    # atmosphere: Annotated[
-    #     Union[Literal["MidlatitudeSummer"], tuple[float, float]],
-    #     "Atmosphere",
-    #     None,
-    # ]
-    # """
-    # Atmosphere profile. Either standard profile name or tuple of the form
-    # (
-    #     total water along vertical path in g/cm^2,
-    #     total ozone in along vertical path in cm-atm
-    # )
-    # """
-    #
-    # aerosol_profile: Annotated[
-    #     Literal["Maritime", "Continental"], "Aerosol Profile", None
-    # ]
-    # """
-    # Aerosol profile, given as standard name.
-    # """
-    #
-    # aerosol_aot: Annotated[Optional[list[tuple[float, float]]], "AOT Layers", None]
-    # """
-    # Detailed AOT profile, given as list of tuples of the form (layer thickness, layer aot).
-    # """
-    #
-    # refl_background: Annotated[Union[float, np.ndarray], "Background Reflectance", None]
-    # """
-    # Reflectance of background.
-    #
-    # Either float for spectrally-constant reflectance or an Nx2 array with
-    # wavelengths in the first column and reflectances in the seconds column.
-    # """
-    #
-    # refl_target: Annotated[Union[float, np.ndarray], "Target Reflectance", None]
-    # """
-    # Reflectance of target.
-    #
-    # Either float for spectrally-constant reflectance or an Nx2 array with
-    # wavelengths in the first column and reflectances in the seconds colum
-    # """
-    #
-    # wavelength: Annotated[float, "Wavelength", "micrometers"]
-    # """Simulated wavelength."""
-
 
 @dataclass
 class Outputs:
