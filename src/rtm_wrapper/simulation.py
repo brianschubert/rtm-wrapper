@@ -113,7 +113,21 @@ class Outputs:
     Temporary / unstable representation.
     """
 
-    apparent_radiance: Annotated[float, "Apparent Radiance", "W/sr-m^2"]
+    apparent_radiance: Annotated[
+        float, MetadataDict(title="Apparent Radiance", unit="W/sr-m^2")
+    ]
+
+    transmittance_scattering_down: Annotated[float, MetadataDict()]
+
+    transmittance_scattering_up: Annotated[float, MetadataDict()]
+
+    transmittance_direct_down: Annotated[float, MetadataDict()]
+
+    transmittance_direct_up: Annotated[float, MetadataDict()]
+
+    transmittance_diffuse_down: Annotated[float, MetadataDict()]
+
+    transmittance_diffuse_up: Annotated[float, MetadataDict()]
 
 
 class SweepSimulation:

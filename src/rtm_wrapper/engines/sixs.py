@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import copy
+import math
 import typing
 from dataclasses import dataclass
 from typing import Literal, TypedDict
@@ -31,12 +32,29 @@ class PySixSEngine(RTMEngine):
         self.load_inputs(inputs, wrapper)
 
         wrapper.run()
+        outputs = wrapper.outputs
+
+        # Extract select outputs.
+        cos_zenith_solar = math.cos(math.radians(outputs.values["solar_z"]))
+        cos_zenith_view = math.cos(math.radians(outputs.values["view_z"]))
+        m_optical_depth_total = -outputs.rat["optical_depth_total"].total
+        total_scattering = outputs.trans["total_scattering"]
+        t_scat_d, t_scat_u = total_scattering.downward, total_scattering.upward
+
+        # Derive transmittances
+        t_dir_d = math.exp(m_optical_depth_total / cos_zenith_solar)
+        t_dir_u = math.exp(m_optical_depth_total / cos_zenith_view)
+        t_diff_d = t_scat_d - t_dir_d
+        t_diff_u = t_scat_u - t_dir_u
 
         return Outputs(
-            **{
-                output_name: wrapper.outputs.values[output_name]
-                for output_name in typing.get_type_hints(Outputs)
-            }
+            apparent_radiance=outputs.values["apparent_radiance"],
+            transmittance_scattering_down=t_scat_d,
+            transmittance_scattering_up=t_scat_u,
+            transmittance_direct_down=t_dir_d,
+            transmittance_direct_up=t_dir_u,
+            transmittance_diffuse_down=t_diff_d,
+            transmittance_diffuse_up=t_diff_u,
         )
 
 
