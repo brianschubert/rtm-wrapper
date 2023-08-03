@@ -9,7 +9,7 @@ import logging
 import pickle
 import typing
 from abc import ABC
-from typing import Callable, Literal
+from typing import Any, Callable, Literal
 
 import numpy as np
 import xarray as xr
@@ -23,7 +23,7 @@ class SweepExecutor(abc.ABC):
     """Base class for simulation executors."""
 
     @abc.abstractmethod
-    def run(self, inputs: SweepSimulation, engine: RTMEngine) -> None:
+    def run(self, sweep: SweepSimulation, engine: RTMEngine, **kwargs: Any) -> None:
         ...
 
     @abc.abstractmethod
@@ -42,9 +42,9 @@ class LocalMemoryExecutor(SweepExecutor, ABC):
     def __init__(self) -> None:
         self._results = None
 
-    def run(self, inputs: SweepSimulation, engine: RTMEngine) -> None:
+    def run(self, sweep: SweepSimulation, engine: RTMEngine, **kwargs: Any) -> None:
         sim_start = datetime.datetime.now().astimezone().isoformat()
-        self._run(inputs, engine)
+        self._run(sweep, engine, **kwargs)
         assert self._results is not None
         sim_end = datetime.datetime.now().astimezone().isoformat()
 
@@ -55,9 +55,9 @@ class LocalMemoryExecutor(SweepExecutor, ABC):
                 "version": rtm_util.build_version(),
                 "platform": rtm_util.platform_summary(),
                 "engine": f"{engine_type.__module__}.{engine_type.__qualname__}",
-                "base_repr": repr(inputs.base),
+                "base_repr": repr(sweep.base),
                 "base_pzb64": base64.b64encode(
-                    gzip.compress(pickle.dumps(inputs.base))
+                    gzip.compress(pickle.dumps(sweep.base))
                 ).decode(),
                 "sim_start": sim_start,
                 "sim_end": sim_end,
@@ -65,7 +65,7 @@ class LocalMemoryExecutor(SweepExecutor, ABC):
         )
 
     @abc.abstractmethod
-    def _run(self, inputs: SweepSimulation, engine: RTMEngine) -> None:
+    def _run(self, sweep: SweepSimulation, engine: RTMEngine, **kwargs: Any) -> None:
         ...
 
     def collect_results(self) -> xr.Dataset:
@@ -103,7 +103,10 @@ class SerialExecutor(LocalMemoryExecutor):
         engine: RTMEngine,
         *,
         step_callback: Callable[[tuple[int, ...]], None] | None = None,
+        **kwargs: Any,
     ) -> None:
+        if kwargs:
+            raise ValueError(f"unknown kwargs {kwargs}")
         self._allocate_results_like(sweep.sweep_spec.grid)
         assert self._results is not None
 
@@ -149,7 +152,10 @@ class ConcurrentExecutor(LocalMemoryExecutor):
         *,
         step_callback: Callable[[tuple[int, ...]], None] | None = None,
         on_error: Literal["ignore", "abort"] = "abort",
+        **kwargs: Any,
     ) -> None:
+        if kwargs:
+            raise ValueError(f"unknown kwargs {kwargs}")
         logger = logging.getLogger(__name__)
         self._allocate_results_like(sweep.sweep_spec.grid)
         assert self._results is not None
