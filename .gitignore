@@ -10,3 +10,4 @@
 /.local-notes/
 /notebooks/scratch*.ipynb
 /notebooks/usgs_splib07.zip
+/notebooks/*.nc
