@@ -224,9 +224,9 @@ def _is_grid_coord(coord_name: str) -> bool:
 # This is assumed in several places.
 if not {f.name for f in dataclasses.fields(Inputs)} == set(INPUT_TOP_NAMES):
     raise ImportError(
-        "Detected misconfiguration in the available output names. This is a bug."
+        "Detected misconfiguration in the available input names. This is a bug."
     )
 if not {f.name for f in dataclasses.fields(Outputs)} == set(OUTPUT_NAMES):
     raise ImportError(
-        "Detected misconfiguration in the available input names. This is a bug."
+        "Detected misconfiguration in the available output names. This is a bug."
     )
