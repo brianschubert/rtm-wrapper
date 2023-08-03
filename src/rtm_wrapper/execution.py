@@ -79,16 +79,13 @@ class LocalMemoryExecutor(SweepExecutor, ABC):
         # Preallocate variables for each output.
         outputs_hints = typing.get_type_hints(Outputs, include_extras=True)
         for output_name, output_hint in outputs_hints.items():
-            output_type, output_title, output_unit = typing.get_args(output_hint)
+            output_type, output_metadata = typing.get_args(output_hint)
             data_vars[output_name] = (
                 # All output variables have the same shape as the input grid.
                 sweep_grid.dims,
                 np.empty(sweep_grid.data.shape, dtype=output_type),
                 # Add output metadata as attributes.
-                {
-                    "title": output_title,
-                    "unit": output_unit,
-                },
+                output_metadata,
             )
 
         self._results = xr.Dataset(data_vars, coords=sweep_grid.coords)
