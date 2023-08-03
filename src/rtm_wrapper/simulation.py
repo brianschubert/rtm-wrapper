@@ -39,6 +39,8 @@ OUTPUT_NAMES: Final[frozenset[OutputName]] = frozenset(typing.get_args(OutputNam
 ParameterValues: TypeAlias = Sequence[Any]
 SweepScript: TypeAlias = dict[str, Union[ParameterValues, dict[str, Any]]]
 
+_PARAMETER_AXES_SEP: Final[str] = "/"
+
 
 @dataclass
 class Inputs(Parameter):
@@ -133,7 +135,7 @@ class SweepSimulation:
                             )
                         }
                     ).coords.items()
-                    if k.partition("__")[0] in INPUT_TOP_NAMES and "/" not in k  # type: ignore
+                    if _is_grid_coord(typing.cast(str, k))
                 }
                 x[...] = base.replace(**overrides)  # type: ignore
 
@@ -198,7 +200,10 @@ def _script2coords(script: SweepScript, base: Inputs) -> _CoordsDict:
             param_coordinates = np.asarray(param_values)
             dims = [sweep_name]
             if param_coordinates.ndim != 1:
-                dims += [f"{param_path}/{i}" for i in range(param_coordinates.ndim - 1)]
+                dims += [
+                    f"{param_path}{_PARAMETER_AXES_SEP}{i}"
+                    for i in range(param_coordinates.ndim - 1)
+                ]
 
             coords[param_path] = (dims, param_coordinates, attrs)  # type: ignore
 
@@ -207,6 +212,12 @@ def _script2coords(script: SweepScript, base: Inputs) -> _CoordsDict:
 
 def _is_special(name: str) -> bool:
     return name.startswith("__") and name.endswith("__")
+
+
+def _is_grid_coord(coord_name: str) -> bool:
+    first_is_input = coord_name.partition("__")[0] in INPUT_TOP_NAMES
+    not_parameter_expansion = _PARAMETER_AXES_SEP not in coord_name
+    return first_is_input and not_parameter_expansion
 
 
 # Verify that the available name globals match their corresponding dataclass fields.
