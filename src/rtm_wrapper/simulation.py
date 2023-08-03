@@ -137,6 +137,9 @@ class SweepSimulation:
                 }
                 x[...] = base.replace(**overrides)  # type: ignore
 
+    def __getitem__(self, item: Any) -> Inputs | np.ndarray:
+        return self.sweep_spec.data_vars["grid"].data[item]
+
     @property
     def sweep_size(self) -> int:
         return self.sweep_spec.data_vars["grid"].data.size

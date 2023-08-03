@@ -191,7 +191,7 @@ class ConcurrentExecutor(LocalMemoryExecutor):
         ) as executor:
             futures_to_index = {
                 executor.submit(
-                    lambda idx: engine.run_simulation(sweep.sweep_spec.grid.data[idx]),
+                    lambda idx: engine.run_simulation(sweep[idx]),
                     idx,
                 ): idx
                 for idx in np.ndindex(sweep.sweep_shape)
@@ -206,7 +206,7 @@ class ConcurrentExecutor(LocalMemoryExecutor):
                             out, output_name
                         )
                 except Exception as ex:
-                    error_input = sweep.sweep_spec.grid.data[idx]
+                    error_input = sweep[idx]
                     logger.error(
                         "exception occurred when running simulation with input=%r, idx=%r",
                         error_input,
