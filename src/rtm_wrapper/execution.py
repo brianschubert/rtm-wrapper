@@ -65,7 +65,7 @@ class LocalMemoryExecutor(SweepExecutor, ABC):
         else:
             outputs = OUTPUT_NAMES
 
-        self._allocate_results_like(sweep.sweep_spec.grid, outputs)
+        self._allocate_results_like(sweep.sweep_spec, outputs)
         assert self._results is not None  # for type checker
 
         sim_start = datetime.datetime.now().astimezone().isoformat()
@@ -98,9 +98,11 @@ class LocalMemoryExecutor(SweepExecutor, ABC):
         return self._results
 
     def _allocate_results_like(
-        self, sweep_grid: xr.DataArray, variables: Iterable[OutputName]
+        self, sweep_spec: xr.Dataset, variables: Iterable[OutputName]
     ) -> None:
         data_vars = {}
+
+        sweep_dims = sweep_spec.indexes.dims
 
         # Preallocate variables for each requested output.
         outputs_hints = typing.get_type_hints(Outputs, include_extras=True)
@@ -108,13 +110,13 @@ class LocalMemoryExecutor(SweepExecutor, ABC):
             output_type, output_metadata = typing.get_args(outputs_hints[output_name])
             data_vars[output_name] = (
                 # All output variables have the same shape as the input grid.
-                sweep_grid.dims,
-                np.empty(sweep_grid.data.shape, dtype=output_type),
+                tuple(sweep_dims.keys()),
+                np.empty(tuple(sweep_dims.values()), dtype=output_type),
                 # Add output metadata as attributes.
                 output_metadata,
             )
 
-        self._results = xr.Dataset(data_vars, coords=sweep_grid.coords)
+        self._results = xr.Dataset(data_vars, coords=sweep_spec.coords)
 
 
 class SerialExecutor(LocalMemoryExecutor):
