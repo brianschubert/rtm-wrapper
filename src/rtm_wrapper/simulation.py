@@ -75,17 +75,29 @@ class Outputs:
         float, MetadataDict(title="Apparent Radiance", unit="W/sr-m^2")
     ]
 
-    transmittance_scattering_down: Annotated[float, MetadataDict()]
+    transmittance_scattering_down: Annotated[
+        float, MetadataDict(title="Downward Scattering", unit="1")
+    ]
 
-    transmittance_scattering_up: Annotated[float, MetadataDict()]
+    transmittance_scattering_up: Annotated[
+        float, MetadataDict(title="Upward Scattering", unit="1")
+    ]
 
-    transmittance_direct_down: Annotated[float, MetadataDict()]
+    transmittance_direct_down: Annotated[
+        float, MetadataDict(title="Direct Downward Transmittance", unit=1)
+    ]
 
-    transmittance_direct_up: Annotated[float, MetadataDict()]
+    transmittance_direct_up: Annotated[
+        float, MetadataDict(title="Direct Upward Transmittance", unit=1)
+    ]
 
-    transmittance_diffuse_down: Annotated[float, MetadataDict()]
+    transmittance_diffuse_down: Annotated[
+        float, MetadataDict(title="Diffuse Downward Transmittance", unit=1)
+    ]
 
-    transmittance_diffuse_up: Annotated[float, MetadataDict()]
+    transmittance_diffuse_up: Annotated[
+        float, MetadataDict(title="Diffuse Downward Transmittance", unit=1)
+    ]
 
 
 class SweepSimulation:
