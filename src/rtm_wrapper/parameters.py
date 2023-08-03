@@ -84,12 +84,12 @@ class Parameter:
 
 @dataclass
 class AltitudePredefined(Parameter):
-    name: Annotated[Literal["sealevel", "satellite"], {"title": "Altitude"}]
+    name: Annotated[Literal["sealevel", "satellite"], MetadataDict(title="Altitude")]
 
 
 @dataclass
 class AltitudeKilometers(Parameter):
-    value: Annotated[float, {"title": "Altitude"}]
+    value: Annotated[float, MetadataDict(title="Altitude")]
 
 
 @dataclass
@@ -103,14 +103,14 @@ class AtmospherePredefined(Parameter):
             "SubarcticSummer",
             "SubarcticWinter",
         ],
-        {"title": "Atmosphere Profile"},
+        MetadataDict(title="Atmosphere Profile"),
     ]
 
 
 @dataclass
 class AtmosphereWaterOzone(Parameter):
-    water: Annotated[float, {"title": "Water Column", "unit": "g/cm^2"}]
-    ozone: Annotated[float, {"title": "Ozone Column", "unit": "cm-atm"}]
+    water: Annotated[float, MetadataDict(title="Water Column", unit="g/cm^2")]
+    ozone: Annotated[float, MetadataDict(title="Ozone Column", unit="cm-atm")]
 
 
 @dataclass
@@ -121,13 +121,14 @@ class AtmosphereAotLayers(AtmospherePredefined):
 @dataclass
 class AerosolProfilePredefined(Parameter):
     name: Annotated[
-        Literal["Maritime", "Urban", "Continental"], {"title": "Aerosol Profile"}
+        Literal["Maritime", "Urban", "Continental"],
+        MetadataDict(title="Aerosol Profile"),
     ]
 
 
 @dataclass
 class GroundReflectanceHomogenousUniformLambertian(Parameter):
-    reflectance: Annotated[float, {"title": "Reflectance"}]
+    reflectance: Annotated[float, MetadataDict(title="Reflectance")]
 
 
 @dataclass
@@ -150,4 +151,4 @@ class GroundReflectanceHeterogeneousLambertian(Parameter):
 
 @dataclass
 class WavelengthFixed(Parameter):
-    value: Annotated[float, {"title": "Wavelength", "unit": "micrometers"}]
+    value: Annotated[float, MetadataDict(title="Wavelength", unit="micrometers")]
