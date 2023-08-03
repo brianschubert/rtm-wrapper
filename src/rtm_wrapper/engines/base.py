@@ -10,7 +10,7 @@ from typing_extensions import Never, TypeAlias
 
 import rtm_wrapper.util as rtm_util
 from rtm_wrapper.parameters import Parameter
-from rtm_wrapper.simulation import InputParameterName, Inputs, Outputs
+from rtm_wrapper.simulation import Inputs, InputTopName, Outputs
 
 ParameterHandler: TypeAlias = Callable[..., None]
 
@@ -49,15 +49,13 @@ class RTMEngine(abc.ABC):
 
 
 class ParameterRegistry:
-    param_implementations: dict[
-        tuple[InputParameterName, type[Parameter]], ParameterHandler
-    ]
+    param_implementations: dict[tuple[InputTopName, type[Parameter]], ParameterHandler]
 
     def __init__(self) -> None:
         self.param_implementations = {}
 
     def register(
-        self, name: InputParameterName, type_: type[Parameter] | None = None
+        self, name: InputTopName, type_: type[Parameter] | None = None
     ) -> Callable[[ParameterHandler], Callable[..., Never]]:
         def _register(func: ParameterHandler) -> Callable[..., Never]:
             if type_ is None:

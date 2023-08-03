@@ -1,9 +1,10 @@
 from __future__ import annotations
 
+import dataclasses
 import typing
 from collections.abc import Sequence
 from dataclasses import dataclass
-from typing import Annotated, Any, Literal, Union
+from typing import Annotated, Any, Final, Literal, Union
 
 import numpy as np
 import xarray as xr
@@ -12,7 +13,7 @@ from typing_extensions import TypeAlias
 from rtm_wrapper import util
 from rtm_wrapper.parameters import MetadataDict, Parameter
 
-InputParameterName: TypeAlias = Literal[
+InputTopName: TypeAlias = Literal[
     "altitude_sensor",
     "altitude_target",
     "atmosphere",
@@ -20,6 +21,21 @@ InputParameterName: TypeAlias = Literal[
     "ground",
     "wavelength",
 ]
+INPUT_TOP_NAMES: Final[frozenset[InputTopName]] = frozenset(
+    typing.get_args(InputTopName)
+)
+
+OutputName: TypeAlias = Literal[
+    "apparent_radiance",
+    "transmittance_scattering_down",
+    "transmittance_scattering_up",
+    "transmittance_direct_down",
+    "transmittance_direct_up",
+    "transmittance_diffuse_down",
+    "transmittance_diffuse_up",
+]
+OUTPUT_NAMES: Final[frozenset[OutputName]] = frozenset(typing.get_args(OutputName))
+
 ParameterValues: TypeAlias = Sequence[Any]
 SweepScript: TypeAlias = dict[str, Union[ParameterValues, dict[str, Any]]]
 
@@ -143,7 +159,6 @@ class SweepSimulation:
 
     def __init__(self, script: SweepScript, base: Inputs) -> None:
         sweep_coords = _script2coords(script, base)
-        input_names = typing.get_type_hints(Inputs).keys()
 
         # TODO maybe tidy.
         # TODO update outdated comment below
@@ -178,7 +193,7 @@ class SweepSimulation:
                             )
                         }
                     ).coords.items()
-                    if k.partition("__")[0] in input_names and "/" not in k  # type: ignore
+                    if k.partition("__")[0] in INPUT_TOP_NAMES and "/" not in k  # type: ignore
                 }
                 x[...] = base.replace(**overrides)  # type: ignore
 
@@ -202,13 +217,12 @@ def _script2coords(script: SweepScript, base: Inputs) -> _CoordsDict:
     xarray handle that on its own.
     """
     coords: _CoordsDict = {}
-    top_input_names = typing.get_args(InputParameterName)
 
     for sweep_name, sweep_spec in script.items():
         if isinstance(sweep_spec, dict):
             # This sweep axes is a "compound" dimension that varies multiple parameters
             # and/or includes custom attributes.
-            if sweep_name in top_input_names:
+            if sweep_name in INPUT_TOP_NAMES:
                 raise ValueError(
                     f"compound sweep axes '{sweep_name}' must not be an input parameter name"
                 )
@@ -250,3 +264,15 @@ def _script2coords(script: SweepScript, base: Inputs) -> _CoordsDict:
 
 def _is_special(name: str) -> bool:
     return name.startswith("__") and name.endswith("__")
+
+
+# Verify that the available name globals match their corresponding dataclass fields.
+# This is assumed in several places.
+if not {f.name for f in dataclasses.fields(Inputs)} == set(INPUT_TOP_NAMES):
+    raise ImportError(
+        "Detected misconfiguration in the available output names. This is a bug."
+    )
+if not {f.name for f in dataclasses.fields(Outputs)} == set(OUTPUT_NAMES):
+    raise ImportError(
+        "Detected misconfiguration in the available input names. This is a bug."
+    )
