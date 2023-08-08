@@ -31,6 +31,10 @@ jupyter = "^1.0.0"
 matplotlib = "^3.7.2"
 alive-progress = "^3.1.4"
 
+[tool.poetry.group.docs.dependencies]
+sphinx = "^7.1.2"
+sphinx-rtd-theme = "^1.2.2"
+
 [tool.poetry.extras]
 6s = ["6s-bin"]
 splib07 = ["splib07-loader"]
