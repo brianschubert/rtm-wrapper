@@ -84,19 +84,19 @@ class Outputs:
     ]
 
     transmittance_direct_down: Annotated[
-        float, MetadataDict(title="Direct Downward Transmittance", unit=1)
+        float, MetadataDict(title="Direct Downward Transmittance", unit="1")
     ]
 
     transmittance_direct_up: Annotated[
-        float, MetadataDict(title="Direct Upward Transmittance", unit=1)
+        float, MetadataDict(title="Direct Upward Transmittance", unit="1")
     ]
 
     transmittance_diffuse_down: Annotated[
-        float, MetadataDict(title="Diffuse Downward Transmittance", unit=1)
+        float, MetadataDict(title="Diffuse Downward Transmittance", unit="1")
     ]
 
     transmittance_diffuse_up: Annotated[
-        float, MetadataDict(title="Diffuse Downward Transmittance", unit=1)
+        float, MetadataDict(title="Diffuse Downward Transmittance", unit="1")
     ]
 
 
