@@ -190,8 +190,10 @@ def _resolve_dims(valid_dims: list[str], given_dims: list[str | None]) -> list[s
             raise ValueError(
                 f"invalid dimension '{given}' - must be one of {valid_dims}"
             )
-
-        unused_dims.remove(given)
+        try:
+            unused_dims.remove(given)
+        except ValueError:
+            raise ValueError(f"dimension '{given}' used more than once")
 
     resolved_dims: list[str] = []
 
