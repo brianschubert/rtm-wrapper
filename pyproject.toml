@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "rtm-wrapper"
-version = "0.1.0a0"
+version = "0.1.0"
 description = ""
 authors = ["Brian Schubert <schubert.b@northeastern.edu>"]
 readme = "README.md"
@@ -9,9 +9,61 @@ packages = [
 ]
 
 [tool.poetry.dependencies]
-python = "^3.10"
+# TODO test and relax dependency specifications
+python = "^3.9"
+py6s = "^1.9.2"
+nptyping = "^2.5.0"
+typing-extensions = "^4.7.1"
+xarray = "^2023.7.0"
+6s-bin = { git = "https://github.com/brianschubert/6s-bin.git", optional = true }
+splib07-loader = { git = "https://github.com/brianschubert/splib07-loader.git", optional = true }
 
+
+[tool.poetry.group.dev.dependencies]
+black = "^23.7.0"
+isort = "^5.12.0"
+pytest = "^7.4.0"
+nbqa = "^1.7.0"
+mypy = "^1.4.1"
+
+[tool.poetry.group.nb.dependencies]
+jupyter = "^1.0.0"
+matplotlib = "^3.7.2"
+alive-progress = "^3.1.4"
+
+[tool.poetry.extras]
+6s = ["6s-bin"]
+splib07 = ["splib07-loader"]
 
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
+
+# Black config.
+[tool.black]
+# How many characters per line to allow.
+# https://black.readthedocs.io/en/stable/the_black_code_style/current_style.html#line-length
+line-length = 88
+# Don't skip skip temporary sanity checks.
+safe = true
+# Python versions that should be supported by Black's output.
+target-version = ["py310"]
+# Set to true to preview style changes that may be added in black's next major release.
+preview = false
+
+# isort config.
+[tool.isort]
+profile = "black"
+
+# mypy config.
+[tool.mypy]
+strict = true
+pretty = true
+
+[[tool.mypy.overrides]]
+module = ["Py6S.*", "matplotlib.*"]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "rtm_wrapper.*"
+warn_return_any = false
