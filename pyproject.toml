@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "rtm-wrapper"
-version = "0.1.0-dev"
+version = "0.1.0"
 description = ""
 authors = ["Brian Schubert <schubert.b@northeastern.edu>"]
 readme = "README.md"
