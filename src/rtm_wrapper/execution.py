@@ -6,6 +6,7 @@ import concurrent.futures
 import datetime
 import gzip
 import logging
+import multiprocessing
 import pickle
 import typing
 from abc import ABC
@@ -161,13 +162,18 @@ class ConcurrentExecutor(LocalMemoryExecutor):
     without appropriate locking.
     """
 
-    _max_workers: int | None
+    _max_workers: int
 
     def __init__(
         self,
         max_workers: int | None = None,
     ) -> None:
         super().__init__()
+        if max_workers is None:
+            # Override ThreadPoolExecutor's default.
+            # Engines tend to be CPU bound (not I/O bound), so the default of more
+            # threads than cores is detrimental.
+            max_workers = multiprocessing.cpu_count()
         self._max_workers = max_workers
 
     def _run(
