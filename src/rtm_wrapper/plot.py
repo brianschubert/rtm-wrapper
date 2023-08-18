@@ -139,11 +139,11 @@ def plot_sweep_grid(
 
     y_prefix = _coords_axes_label(grid_y_coords, include_units=False)
     for ax, label in zip(axs[:, 0], grid_y_coords.values):
-        sep = "=" if len(y_prefix) + len(label) < 18 else "=\n"
+        sep = "=" if len(y_prefix) + len(str(label)) < 18 else "=\n"
         ax.set_ylabel(f"{y_prefix}{sep}{label}")
     x_prefix = _coords_axes_label(grid_x_coords, include_units=False)
     for ax, label in zip(axs[0, :], grid_x_coords.values):
-        sep = "=" if len(x_prefix) + len(label) < 18 else "=\n"
+        sep = "=" if len(x_prefix) + len(str(label)) < 18 else "=\n"
         ax.set_title(f"{x_prefix}{sep}{label}")
 
     fig.supxlabel(_coords_axes_label(axes_coords))
