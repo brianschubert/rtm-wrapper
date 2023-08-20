@@ -197,11 +197,12 @@ class ConcurrentExecutor(LocalMemoryExecutor):
         with concurrent.futures.ThreadPoolExecutor(
             max_workers=self._max_workers
         ) as executor:
+
+            def target(idx: tuple[int, ...]) -> Outputs:
+                return engine.run_simulation(sweep[idx])
+
             futures_to_index = {
-                executor.submit(
-                    lambda idx: engine.run_simulation(sweep[idx]),
-                    idx,
-                ): idx
+                executor.submit(target, idx): idx
                 for idx in np.ndindex(sweep.sweep_shape)
             }
 
