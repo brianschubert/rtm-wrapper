@@ -13,7 +13,7 @@ packages = [
 python = "^3.9"
 py6s = "^1.9.2"
 nptyping = "^2.5.0"
-typing-extensions = "^4.7.1"
+typing-extensions = "^4.5.0"
 xarray = "^2023.7.0"
 6s-bin = { git = "https://github.com/brianschubert/6s-bin.git", optional = true }
 splib07-loader = { git = "https://github.com/brianschubert/splib07-loader.git", optional = true }
