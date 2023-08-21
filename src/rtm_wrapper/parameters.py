@@ -238,6 +238,11 @@ class Parameter(metaclass=ParameterMeta):
                 self.set(param_path, param_arg)
             return
 
+        if value is None:
+            raise ParameterError(
+                "value must be specified when first argument is not a mapping"
+            )
+
         try:
             self._set(_parse_parameter_path(param), value)
         except Exception as ex:
