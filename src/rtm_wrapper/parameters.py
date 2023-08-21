@@ -229,10 +229,9 @@ class Parameter(metaclass=ParameterMeta):
             return
 
         if param is None:
-            raise ValueError(
-                "parameter-value pair or update mapping must be specified"
-                " when no kwargs are given"
-            )
+            # No positional arguments were given.
+            # Called no with arguments - do nothing.
+            return
 
         if isinstance(param, Mapping):
             for param_path, param_arg in param.items():
