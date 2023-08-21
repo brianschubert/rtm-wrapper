@@ -63,12 +63,12 @@ def pysixs_default_inputs() -> Inputs:
     Return input parameters that replicate Py6S's defaults.
     """
     return Inputs(
-        altitude_sensor=rtm_param.AltitudePredefined("sealevel"),
-        altitude_target=rtm_param.AltitudePredefined("sealevel"),
-        atmosphere=rtm_param.AtmospherePredefined("MidlatitudeSummer"),
-        aerosol_profile=rtm_param.AerosolProfilePredefined("Maritime"),
-        ground=rtm_param.GroundReflectanceHomogenousUniformLambertian(0.3),
-        wavelength=rtm_param.WavelengthFixed(0.5),
+        altitude_sensor=rtm_param.AltitudePredefined(name="sealevel"),
+        altitude_target=rtm_param.AltitudePredefined(name="sealevel"),
+        atmosphere=rtm_param.AtmospherePredefined(name="MidlatitudeSummer"),
+        aerosol_profile=rtm_param.AerosolProfilePredefined(name="Maritime"),
+        ground=rtm_param.GroundReflectanceHomogenousUniformLambertian(reflectance=0.3),
+        wavelength=rtm_param.WavelengthFixed(value=0.5),
     )
 
 
@@ -126,19 +126,19 @@ def _handle(
     )
 
 
-@PySixSEngine.params.register("ground")
-def _handle(
-    inputs: rtm_param.GroundReflectanceHeterogeneousLambertian, wrapper: Py6S.SixS
-) -> None:
-    wrapper.ground_reflectance = Py6S.GroundReflectance.HeterogeneousLambertian(
-        radius=0.5,
-        ro_target=np.stack(
-            (inputs.target.wavelengths, inputs.target.spectrum), axis=-1
-        ),
-        ro_env=np.stack(
-            (inputs.background.wavelengths, inputs.background.spectrum), axis=-1
-        ),
-    )
+# @PySixSEngine.params.register("ground")
+# def _handle(
+#     inputs: rtm_param.GroundReflectanceHeterogeneousLambertian, wrapper: Py6S.SixS
+# ) -> None:
+#     wrapper.ground_reflectance = Py6S.GroundReflectance.HeterogeneousLambertian(
+#         radius=0.5,
+#         ro_target=np.stack(
+#             (inputs.target.wavelengths, inputs.target.spectrum), axis=-1
+#         ),
+#         ro_env=np.stack(
+#             (inputs.background.wavelengths, inputs.background.spectrum), axis=-1
+#         ),
+#     )
 
 
 # Original helpers below.

@@ -11,7 +11,12 @@ import xarray as xr
 from typing_extensions import TypeAlias
 
 from rtm_wrapper import util
-from rtm_wrapper.parameters import MetadataDict, Parameter
+from rtm_wrapper.parameters import (
+    MetadataDict,
+    Parameter,
+    ParameterError,
+    ParameterField,
+)
 
 InputTopName: TypeAlias = Literal[
     "altitude_sensor",
@@ -42,7 +47,6 @@ SweepScript: TypeAlias = dict[str, Union[ParameterValues, dict[str, Any]]]
 _PARAMETER_AXES_SEP: Final[str] = "/"
 
 
-@dataclass
 class Inputs(Parameter):
     """
     Common input specification for RTM simulations.
@@ -50,17 +54,17 @@ class Inputs(Parameter):
     Temporary / unstable representation.
     """
 
-    altitude_sensor: Parameter
+    altitude_sensor = ParameterField(Parameter)
 
-    altitude_target: Parameter
+    altitude_target = ParameterField(Parameter)
 
-    atmosphere: Parameter
+    atmosphere = ParameterField(Parameter)
 
-    aerosol_profile: Parameter
+    aerosol_profile = ParameterField(Parameter)
 
-    ground: Parameter
+    ground = ParameterField(Parameter)
 
-    wavelength: Parameter
+    wavelength = ParameterField(Parameter)
 
 
 @dataclass
@@ -207,8 +211,13 @@ def _script2coords(script: SweepScript, base: Inputs) -> _CoordsDict:
 
         for param_path, param_values in sweep_parameters.items():
             # TODO parameter path validation and uniqueness checking?
-            attrs = base.get_metadata(param_path)
 
+            try:
+                attrs = base.get_metadata(param_path)
+            except ParameterError as ex:
+                raise ParameterError(f"invalid parameter '{param_path}': {ex}")
+
+            # TODO get dtype from field
             param_coordinates = np.asarray(param_values)
             dims = [sweep_name]
             if param_coordinates.ndim != 1:
@@ -234,10 +243,10 @@ def _is_grid_coord(coord_name: str) -> bool:
 
 # Verify that the available name globals match their corresponding dataclass fields.
 # This is assumed in several places.
-if not {f.name for f in dataclasses.fields(Inputs)} == set(INPUT_TOP_NAMES):
-    raise ImportError(
-        "Detected misconfiguration in the available input names. This is a bug."
-    )
+# if not {f.name for f in dataclasses.fields(Inputs)} == set(INPUT_TOP_NAMES):
+#     raise ImportError(
+#         "Detected misconfiguration in the available input names. This is a bug."
+#     )
 if not {f.name for f in dataclasses.fields(Outputs)} == set(OUTPUT_NAMES):
     raise ImportError(
         "Detected misconfiguration in the available output names. This is a bug."

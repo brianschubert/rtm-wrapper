@@ -10,7 +10,7 @@ from typing_extensions import Never, TypeAlias
 
 import rtm_wrapper.util as rtm_util
 from rtm_wrapper.parameters import Parameter
-from rtm_wrapper.simulation import Inputs, InputTopName, Outputs
+from rtm_wrapper.simulation import INPUT_TOP_NAMES, Inputs, InputTopName, Outputs
 
 ParameterHandler: TypeAlias = Callable[..., None]
 
@@ -33,8 +33,7 @@ class RTMEngine(abc.ABC):
     def load_inputs(
         self, inputs: Inputs, *handler_args: Any, **handlers_kwargs: Any
     ) -> None:
-        for field in dataclasses.fields(inputs):
-            param_name = field.name
+        for param_name in INPUT_TOP_NAMES:
             param_value = getattr(inputs, param_name)
             try:
                 handler = self.__class__.params.param_implementations[
