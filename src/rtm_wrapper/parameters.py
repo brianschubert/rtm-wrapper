@@ -141,6 +141,13 @@ class FloatField(Field[float]):
     dtype = np.dtype(float)
 
 
+class FloatArrayField(Field[np.ndarray]):
+    """Field taking on a float value."""
+
+    # TODO array validation
+    dtype = np.dtype(float)
+
+
 class ParameterMeta(type):
     """Metaclass for parameters."""
 
@@ -360,22 +367,20 @@ class GroundReflectanceHomogenousUniformLambertian(Parameter):
     reflectance = FloatField(title="Reflectance", unit="1")
 
 
-# @dataclass
-# class GroundReflectanceHomogenousLambertian(Parameter):
-#     wavelengths: np.ndarray
-#     spectrum: np.ndarray
-#
-#
+class GroundReflectanceHomogenousLambertian(Parameter):
+    wavelengths = FloatArrayField("Wavelength", unit="micrometers")
+    spectrum = FloatArrayField("Reflectance", unit="1")
+
+
 # @dataclass
 # class GroundReflectanceHeterogeneousUniformLambertian(Parameter):
 #     target: float
 #     background: float
-#
-#
-# @dataclass
-# class GroundReflectanceHeterogeneousLambertian(Parameter):
-#     target: GroundReflectanceHomogenousLambertian
-#     background: GroundReflectanceHomogenousLambertian
+
+
+class GroundReflectanceHeterogeneousLambertian(Parameter):
+    target = ParameterField(GroundReflectanceHomogenousLambertian)
+    background = ParameterField(GroundReflectanceHomogenousLambertian)
 
 
 class WavelengthFixed(Parameter):

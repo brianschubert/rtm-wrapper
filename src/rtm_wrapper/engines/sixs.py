@@ -126,19 +126,19 @@ def _handle(
     )
 
 
-# @PySixSEngine.params.register("ground")
-# def _handle(
-#     inputs: rtm_param.GroundReflectanceHeterogeneousLambertian, wrapper: Py6S.SixS
-# ) -> None:
-#     wrapper.ground_reflectance = Py6S.GroundReflectance.HeterogeneousLambertian(
-#         radius=0.5,
-#         ro_target=np.stack(
-#             (inputs.target.wavelengths, inputs.target.spectrum), axis=-1
-#         ),
-#         ro_env=np.stack(
-#             (inputs.background.wavelengths, inputs.background.spectrum), axis=-1
-#         ),
-#     )
+@PySixSEngine.params.register("ground")
+def _handle(
+    inputs: rtm_param.GroundReflectanceHeterogeneousLambertian, wrapper: Py6S.SixS
+) -> None:
+    wrapper.ground_reflectance = Py6S.GroundReflectance.HeterogeneousLambertian(
+        radius=0.5,
+        ro_target=np.stack(
+            (inputs.target.wavelengths, inputs.target.spectrum), axis=-1
+        ),
+        ro_env=np.stack(
+            (inputs.background.wavelengths, inputs.background.spectrum), axis=-1
+        ),
+    )
 
 
 # Original helpers below.

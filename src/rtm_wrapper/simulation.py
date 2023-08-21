@@ -134,7 +134,12 @@ class SweepSimulation:
         )
         self.base = base
 
-        sweep_dims = frozenset(sweep_dims)
+        # TODO more robust input coordinate detection
+        input_coords = frozenset(
+            coord
+            for coord in self.sweep_spec.coords.keys()
+            if any(coord.startswith(top_name) for top_name in INPUT_TOP_NAMES)  # type: ignore
+        )
 
         # Populate sweep grid with input combinations.
         with np.nditer(
@@ -153,7 +158,7 @@ class SweepSimulation:
                             )
                         }
                     ).coords.items()
-                    if k in sweep_dims
+                    if k in input_coords
                 }
                 x[...] = base.replace(overrides)  # type: ignore
 
