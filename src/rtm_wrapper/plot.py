@@ -70,10 +70,6 @@ def plot_sweep_legend(
     for legend_idx, legend_label in enumerate(legend_coords.values):
         if isinstance(legend_label, float):
             legend_label = f"{legend_label:.3f}"
-        print(
-            axes_coords.values,
-            sweep_variable.isel({legend_dim: legend_idx}, drop=True),
-        )
         ax.plot(
             axes_coords.values,
             sweep_variable.isel({legend_dim: legend_idx}, drop=True),
