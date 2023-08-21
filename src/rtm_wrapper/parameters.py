@@ -99,7 +99,7 @@ class Field(Generic[F]):
         pass  # TODO settle on validation framework
 
     def metadata(self) -> MetadataDict:
-        metadata = {}
+        metadata: MetadataDict = {}
         if self.title is not None:
             metadata["title"] = self.title
         if self.unit is not None:
@@ -144,7 +144,16 @@ class FloatField(Field[float]):
 class ParameterMeta(type):
     """Metaclass for parameters."""
 
-    def __new__(cls, name: str, bases, namespace, /, **kwargs) -> type:
+    _fields: frozenset[str]
+
+    def __new__(
+        cls: type[ParameterMeta],
+        name: str,
+        bases: tuple[type, ...],
+        namespace: dict[str, Any],
+        /,
+        **kwargs: Any,
+    ) -> type:
         cls = super().__new__(cls, name, bases, namespace, **kwargs)
 
         fields = set()
@@ -153,7 +162,7 @@ class ParameterMeta(type):
         for base in bases:
             if not isinstance(type(base), ParameterMeta):
                 continue
-            fields.update(base._fields)
+            fields.update(base._fields)  # type: ignore
 
         fields.update(
             name for name, value in namespace.items() if isinstance(value, Field)
@@ -171,6 +180,8 @@ class Parameter(metaclass=ParameterMeta):
     Parameter subclasses should represent some definite physical representation
     of a model parameter that RTM engines can optionally implement.
     """
+
+    _fields: ClassVar[frozenset[str]]
 
     def __init__(self, **kwargs: Any) -> None:
         for name, value in kwargs.items():
@@ -214,7 +225,7 @@ class Parameter(metaclass=ParameterMeta):
 
     def set(
         self,
-        param: ParameterPath | None = None,
+        param: Mapping[str, Any] | ParameterPath | None = None,
         value: Any | None = None,
         /,
         **kwargs: Any,
@@ -270,7 +281,7 @@ class Parameter(metaclass=ParameterMeta):
         ...
 
     @overload
-    def get_fields(self, style: Literal["()"] = ...) -> list[tuple[str, ...]]:
+    def get_fields(self, style: Literal["()"]) -> list[tuple[str, ...]]:
         ...
 
     def get_fields(

@@ -143,7 +143,7 @@ class SerialExecutor(LocalMemoryExecutor):
                 out = engine.run_simulation(inputs.item())  # type: ignore
                 for output_name in self._results.keys():
                     self._results.data_vars[output_name][it.multi_index] = getattr(
-                        out, output_name
+                        out, output_name  # type: ignore
                     )
                 if step_callback is not None:
                     step_callback(it.multi_index)
@@ -199,7 +199,7 @@ class ConcurrentExecutor(LocalMemoryExecutor):
         ) as executor:
 
             def target(idx: tuple[int, ...]) -> Outputs:
-                return engine.run_simulation(sweep[idx])
+                return engine.run_simulation(sweep[idx])  # type: ignore
 
             futures_to_index = {
                 executor.submit(target, idx): idx
@@ -212,7 +212,7 @@ class ConcurrentExecutor(LocalMemoryExecutor):
                     out = future.result()
                     for output_name in self._results.keys():
                         self._results.variables[output_name][idx] = getattr(
-                            out, output_name
+                            out, output_name  # type: ignore
                         )
                 except Exception as ex:
                     error_input = sweep[idx]

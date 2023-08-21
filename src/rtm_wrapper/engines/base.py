@@ -37,7 +37,7 @@ class RTMEngine(abc.ABC):
             param_value = getattr(inputs, param_name)
             try:
                 handler = self.__class__.params.param_implementations[
-                    (param_name, type(param_value))  # type: ignore
+                    (param_name, type(param_value))
                 ]
             except KeyError as ex:
                 raise RuntimeError(
