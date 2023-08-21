@@ -155,7 +155,7 @@ class SweepSimulation:
                     ).coords.items()
                     if k in sweep_dims
                 }
-                x[...] = base.replace(**overrides)  # type: ignore
+                x[...] = base.replace(overrides)  # type: ignore
 
     def __getitem__(self, item: Any) -> Inputs | np.ndarray:
         return self.sweep_spec.data_vars["grid"].data[item]

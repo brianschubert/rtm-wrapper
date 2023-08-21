@@ -191,9 +191,9 @@ class Parameter(metaclass=ParameterMeta):
 
         return f"{type(self).__name__}({', '.join(field_parts)})"
 
-    def replace(self, **kwargs: Any) -> Parameter:
+    def replace(self, *args: Any, **kwargs: Any) -> Parameter:
         duplicate = copy.deepcopy(self)
-        duplicate.set(**kwargs)
+        duplicate.set(*args, **kwargs)
         return duplicate
 
     @overload
