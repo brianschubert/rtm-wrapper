@@ -55,7 +55,7 @@ class PySixSEngine(RTMEngine):
             transmittance_direct_up=t_dir_u,
             transmittance_diffuse_down=t_diff_d,
             transmittance_diffuse_up=t_diff_u,
-            transmittance_total_gas=outputs.trans["global_gas"]["total"],
+            transmittance_total_gas=outputs.trans["global_gas"].total,
         )
 
 
