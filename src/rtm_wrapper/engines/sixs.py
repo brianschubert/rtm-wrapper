@@ -55,6 +55,7 @@ class PySixSEngine(RTMEngine):
             transmittance_direct_up=t_dir_u,
             transmittance_diffuse_down=t_diff_d,
             transmittance_diffuse_up=t_diff_u,
+            transmittance_total_gas=outputs.trans["global_gas"]["total"],
         )
 
 
@@ -169,6 +170,7 @@ def _handle(inputs: rtm_param.AerosolAOTLayers, wrapper: Py6S.SixS) -> None:
 
 # Original helpers below.
 
+
 _TransmittanceName: TypeAlias = Literal[
     "aerosol_scattering",
     "ch4",
@@ -182,7 +184,6 @@ _TransmittanceName: TypeAlias = Literal[
     "total_scattering",
     "water",
 ]
-
 _RatName: TypeAlias = Literal[
     "direction_of_plane_polarization",
     "optical_depth_plane",

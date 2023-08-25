@@ -103,6 +103,10 @@ class Outputs:
         float, MetadataDict(title="Diffuse Downward Transmittance", unit="1")
     ]
 
+    transmittance_total_gas: Annotated[
+        float, MetadataDict(title="Total Gas Transmittance", unit="1")
+    ]
+
 
 class SweepSimulation:
     """
