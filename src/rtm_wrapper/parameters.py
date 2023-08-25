@@ -167,7 +167,7 @@ class ParameterMeta(type):
 
         # TODO check for conflicts among base classes and current class?
         for base in bases:
-            if not isinstance(type(base), ParameterMeta):
+            if not issubclass(type(base), ParameterMeta):
                 continue
             fields.update(base._fields)  # type: ignore
 
