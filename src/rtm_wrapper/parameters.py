@@ -342,7 +342,7 @@ class AltitudePredefined(Parameter):
 
 
 class AltitudeKilometers(Parameter):
-    value = FloatField(title="Altitude")
+    value = FloatField(title="Altitude", unit="km")
 
 
 class AtmospherePredefined(Parameter):
