@@ -38,6 +38,7 @@ OutputName: TypeAlias = Literal[
     "transmittance_direct_up",
     "transmittance_diffuse_down",
     "transmittance_diffuse_up",
+    "transmittance_total_gas",
 ]
 OUTPUT_NAMES: Final[frozenset[OutputName]] = frozenset(typing.get_args(OutputName))
 
