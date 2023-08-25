@@ -98,6 +98,11 @@ def _handle(inputs: rtm_param.AltitudePredefined, wrapper: Py6S.SixS) -> None:
         raise RuntimeError(f"bad parameter {inputs=}")
 
 
+@PySixSEngine.params.register("altitude_target")
+def _handle(inputs: rtm_param.AltitudeKilometers, wrapper: Py6S.SixS) -> None:
+    wrapper.altitudes.set_target_custom_altitude(inputs.value)
+
+
 @PySixSEngine.params.register("atmosphere")
 def _handle(inputs: rtm_param.AtmospherePredefined, wrapper: Py6S.SixS) -> None:
     atmos_profile = getattr(Py6S.AtmosProfile, inputs.name)
