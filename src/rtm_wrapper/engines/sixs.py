@@ -66,7 +66,7 @@ def pysixs_default_inputs() -> Inputs:
         altitude_sensor=rtm_param.AltitudePredefined(name="sealevel"),
         altitude_target=rtm_param.AltitudePredefined(name="sealevel"),
         atmosphere=rtm_param.AtmospherePredefined(name="MidlatitudeSummer"),
-        aerosol_profile=rtm_param.AerosolProfilePredefined(name="Maritime"),
+        aerosol_profile=rtm_param.AerosolProfilePredefined(profile="Maritime"),
         ground=rtm_param.GroundReflectanceHomogenousUniformLambertian(reflectance=0.3),
         wavelength=rtm_param.WavelengthFixed(value=0.5),
     )
@@ -113,7 +113,7 @@ def _handle(inputs: rtm_param.AtmosphereWaterOzone, wrapper: Py6S.SixS) -> None:
 
 @PySixSEngine.params.register("aerosol_profile")
 def _handle(inputs: rtm_param.AerosolProfilePredefined, wrapper: Py6S.SixS) -> None:
-    aero_profile = getattr(Py6S.AeroProfile, inputs.name)
+    aero_profile = getattr(Py6S.AeroProfile, inputs.profile)
     wrapper.aero_profile = Py6S.AeroProfile.PredefinedType(aero_profile)
 
 
@@ -139,6 +139,27 @@ def _handle(
             (inputs.background.wavelengths, inputs.background.spectrum), axis=-1
         ),
     )
+
+
+@PySixSEngine.params.register("aerosol_profile")
+def _handle(inputs: rtm_param.AerosolAOTSingleLayer, wrapper: Py6S.SixS) -> None:
+    wrapper.aero_profile = Py6S.AeroProfile.UserProfile(
+        getattr(Py6S.AeroProfile, inputs.profile)
+    )
+    wrapper.aero_profile.add_layer(inputs.height, inputs.aot)
+
+
+@PySixSEngine.params.register("aerosol_profile")
+def _handle(inputs: rtm_param.AerosolAOTLayers, wrapper: Py6S.SixS) -> None:
+    if not inputs.layers.ndim == 2 and inputs.layers.shape[-1]:
+        raise ValueError(
+            f"bad shape for AOT layers: expected (*, 2) or (2,), got ({inputs.layers.shape}"
+        )
+    wrapper.aero_profile = Py6S.AeroProfile.UserProfile(
+        getattr(Py6S.AeroProfile, inputs.profile)
+    )
+    for layer in inputs.layers:
+        wrapper.aero_profile.add_layer(*layer)
 
 
 # Original helpers below.

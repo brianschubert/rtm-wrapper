@@ -354,13 +354,17 @@ class AtmosphereWaterOzone(Parameter):
     ozone = FloatField(title="Ozone Column", unit="cm-atm")
 
 
-# @dataclass
-# class AtmosphereAotLayers(AtmospherePredefined):
-#     layers: np.ndarray
-
-
 class AerosolProfilePredefined(Parameter):
-    name = StrField(title="Aerosol Profile")
+    profile = StrField(title="Aerosol Profile")
+
+
+class AerosolAOTSingleLayer(AerosolProfilePredefined):
+    height = FloatField(title="Height", unit="km")
+    aot = FloatField(title="AOT", unit="1")
+
+
+class AerosolAOTLayers(AerosolProfilePredefined):
+    layers = FloatArrayField()
 
 
 class GroundReflectanceHomogenousUniformLambertian(Parameter):
