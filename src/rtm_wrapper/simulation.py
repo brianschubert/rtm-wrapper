@@ -39,6 +39,7 @@ OutputName: TypeAlias = Literal[
     "transmittance_diffuse_down",
     "transmittance_diffuse_up",
     "transmittance_total_gas",
+    "total_transmission",
 ]
 OUTPUT_NAMES: Final[frozenset[OutputName]] = frozenset(typing.get_args(OutputName))
 
@@ -106,6 +107,10 @@ class Outputs:
 
     transmittance_total_gas: Annotated[
         float, MetadataDict(title="Total Gas Transmittance", unit="1")
+    ]
+
+    total_transmission: Annotated[
+        float, MetadataDict(title="Total Transmission", unit="1")
     ]
 
 

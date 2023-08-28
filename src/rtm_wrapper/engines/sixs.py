@@ -46,6 +46,14 @@ class PySixSEngine(RTMEngine):
         t_dir_u = math.exp(m_optical_depth_total / cos_zenith_view)
         t_diff_d = t_scat_d - t_dir_d
         t_diff_u = t_scat_u - t_dir_u
+        t_gas = outputs.trans["global_gas"].total
+
+        total_transmission = (
+            t_dir_d * t_dir_u
+            + t_diff_d * t_dir_u
+            + t_dir_d * t_diff_u
+            + t_diff_d * t_diff_u
+        ) * t_gas
 
         return Outputs(
             apparent_radiance=outputs.values["apparent_radiance"],
@@ -55,7 +63,8 @@ class PySixSEngine(RTMEngine):
             transmittance_direct_up=t_dir_u,
             transmittance_diffuse_down=t_diff_d,
             transmittance_diffuse_up=t_diff_u,
-            transmittance_total_gas=outputs.trans["global_gas"].total,
+            transmittance_total_gas=t_gas,
+            total_transmission=total_transmission,
         )
 
 
