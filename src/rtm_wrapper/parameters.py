@@ -141,6 +141,12 @@ class FloatField(Field[float]):
     dtype = np.dtype(float)
 
 
+class IntField(Field[int]):
+    """Field taking on an integer value."""
+
+    dtype = np.dtype(int)
+
+
 class FloatArrayField(Field[np.ndarray]):
     """Field taking on a float value."""
 
@@ -389,6 +395,15 @@ class GroundReflectanceHeterogeneousLambertian(Parameter):
 
 class WavelengthFixed(Parameter):
     value = FloatField(title="Wavelength", unit="micrometers")
+
+
+class GeometryAngleDate(Parameter):
+    solar_zenith = FloatField(title="Solar Zenith Angle", unit="degrees")
+    solar_azimuth = FloatField(title="Solar Azimuth Angle", unit="degrees")
+    view_zenith = FloatField(title="View Zenith Angle", unit="degrees")
+    view_azimuth = FloatField(title="View Azimuth Angle", unit="degrees")
+    day = IntField(title="Day")
+    month = IntField(title="Month")
 
 
 @contextlib.contextmanager

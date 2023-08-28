@@ -24,6 +24,7 @@ InputTopName: TypeAlias = Literal[
     "atmosphere",
     "aerosol_profile",
     "ground",
+    "geometry",
     "wavelength",
 ]
 INPUT_TOP_NAMES: Final[frozenset[InputTopName]] = frozenset(
@@ -63,6 +64,8 @@ class Inputs(Parameter):
     atmosphere = ParameterField(Parameter)
 
     aerosol_profile = ParameterField(Parameter)
+
+    geometry = ParameterField(Parameter)
 
     ground = ParameterField(Parameter)
 

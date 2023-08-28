@@ -78,6 +78,14 @@ def pysixs_default_inputs() -> Inputs:
         atmosphere=rtm_param.AtmospherePredefined(name="MidlatitudeSummer"),
         aerosol_profile=rtm_param.AerosolProfilePredefined(profile="Maritime"),
         ground=rtm_param.GroundReflectanceHomogenousUniformLambertian(reflectance=0.3),
+        geometry=rtm_param.GeometryAngleDate(
+            solar_zenith=32,
+            solar_azimuth=264,
+            view_zenith=23,
+            view_azimuth=190,
+            day=14,
+            month=7,
+        ),
         wavelength=rtm_param.WavelengthFixed(value=0.5),
     )
 
@@ -175,6 +183,18 @@ def _handle(inputs: rtm_param.AerosolAOTLayers, wrapper: Py6S.SixS) -> None:
     )
     for layer in inputs.layers:
         wrapper.aero_profile.add_layer(*layer)
+
+
+@PySixSEngine.params.register("geometry")
+def _handle(inputs: rtm_param.GeometryAngleDate, wrapper: Py6S.SixS) -> None:
+    geometry = Py6S.Geometry.User()
+    geometry.solar_z = inputs.solar_zenith
+    geometry.solar_a = inputs.solar_azimuth
+    geometry.view_z = inputs.view_zenith
+    geometry.view_a = inputs.solar_azimuth
+    geometry.day = inputs.day
+    geometry.month = inputs.month
+    wrapper.geometry = geometry
 
 
 # Original helpers below.
