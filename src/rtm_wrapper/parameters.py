@@ -207,7 +207,7 @@ class Parameter(metaclass=ParameterMeta):
 
     def __repr__(self) -> str:
         field_parts = []
-        for name in self._fields:
+        for name in sorted(self._fields):
             try:
                 field_parts.append(f"{name}={getattr(self, name)!r}")
             except UnsetParameterError:
