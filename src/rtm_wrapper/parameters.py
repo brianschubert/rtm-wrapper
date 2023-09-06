@@ -116,8 +116,8 @@ class ParameterField(Field[P]):
 
     _parameter_type: type[P]
 
-    def __init__(self, parameter_type: type[P]) -> None:
-        super().__init__(title=None, unit=None)
+    def __init__(self, parameter_type: type[P], title: str | None = None) -> None:
+        super().__init__(title=title, unit=None)
         self._parameter_type = parameter_type
 
     def validate(self, instance: Any, value: F) -> None:
