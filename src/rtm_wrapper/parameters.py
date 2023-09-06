@@ -336,6 +336,18 @@ class Parameter(metaclass=ParameterMeta):
                 raise ParameterError(f"unknown field '{curr_field}'")
 
 
+class AbstractParameterMeta(ParameterMeta, abc.ABCMeta):
+    """Metaclass for abstract parameters."""
+
+
+class AbstractParameter(Parameter, metaclass=AbstractParameterMeta):
+    """
+    Base class for abstract input parameters.
+
+    Like ``Parameter``, but supports ``abc.ABC`` astract behavior.
+    """
+
+
 def _parse_parameter_path(param_path: str | tuple[str, ...]) -> tuple[str, ...]:
     if isinstance(param_path, tuple):
         return param_path
