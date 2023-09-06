@@ -4,8 +4,10 @@ Model agnostic descriptions of simulation input parameters.
 
 from __future__ import annotations
 
+import abc
 import contextlib
 import copy
+import math
 import re
 from collections.abc import Mapping
 from typing import (
@@ -409,11 +411,32 @@ class WavelengthFixed(Parameter):
     value = FloatField(title="Wavelength", unit="micrometers")
 
 
+class AngleParameter(AbstractParameter):
+    @abc.abstractmethod
+    def as_degrees(self) -> float:
+        ...
+
+
+class AngleDegreesParameter(AngleParameter):
+    degrees = FloatField(title="Angle", unit="degrees")
+
+    def as_degrees(self) -> float:
+        return self.degrees
+
+
+class AngleCosineParameter(AngleParameter):
+    cosine = FloatField(title="Angle Cosine", unit="1")
+
+    def as_degrees(self) -> float:
+        m = math  # Save a LOAD_GLOBAL. Probably a flagrantly premmature optiziataion
+        return m.degrees(m.acos(self.cosine))
+
+
 class GeometryAngleDate(Parameter):
-    solar_zenith = FloatField(title="Solar Zenith Angle", unit="degrees")
-    solar_azimuth = FloatField(title="Solar Azimuth Angle", unit="degrees")
-    view_zenith = FloatField(title="View Zenith Angle", unit="degrees")
-    view_azimuth = FloatField(title="View Azimuth Angle", unit="degrees")
+    solar_zenith = ParameterField(AngleParameter, title="Solar Zenith")
+    solar_azimuth = ParameterField(AngleParameter, title="Solar Azimuth")
+    view_zenith = ParameterField(AngleParameter, title="View Zenith")
+    view_azimuth = ParameterField(AngleParameter, title="View Azimuth")
     day = IntField(title="Day")
     month = IntField(title="Month")
 

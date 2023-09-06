@@ -79,10 +79,10 @@ def pysixs_default_inputs() -> Inputs:
         aerosol_profile=rtm_param.AerosolProfilePredefined(profile="Maritime"),
         ground=rtm_param.GroundReflectanceHomogenousUniformLambertian(reflectance=0.3),
         geometry=rtm_param.GeometryAngleDate(
-            solar_zenith=32,
-            solar_azimuth=264,
-            view_zenith=23,
-            view_azimuth=190,
+            solar_zenith=rtm_param.AngleDegreesParameter(degrees=32),
+            solar_azimuth=rtm_param.AngleDegreesParameter(degrees=264),
+            view_zenith=rtm_param.AngleDegreesParameter(degrees=23),
+            view_azimuth=rtm_param.AngleDegreesParameter(degrees=190),
             day=14,
             month=7,
         ),
@@ -188,10 +188,10 @@ def _handle(inputs: rtm_param.AerosolAOTLayers, wrapper: Py6S.SixS) -> None:
 @PySixSEngine.params.register("geometry")
 def _handle(inputs: rtm_param.GeometryAngleDate, wrapper: Py6S.SixS) -> None:
     geometry = Py6S.Geometry.User()
-    geometry.solar_z = inputs.solar_zenith
-    geometry.solar_a = inputs.solar_azimuth
-    geometry.view_z = inputs.view_zenith
-    geometry.view_a = inputs.solar_azimuth
+    geometry.solar_z = inputs.solar_zenith.as_degrees()
+    geometry.solar_a = inputs.solar_azimuth.as_degrees()
+    geometry.view_z = inputs.view_zenith.as_degrees()
+    geometry.view_a = inputs.solar_azimuth.as_degrees()
     geometry.day = inputs.day
     geometry.month = inputs.month
     wrapper.geometry = geometry
