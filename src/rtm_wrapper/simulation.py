@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import dataclasses
 import typing
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from typing import Annotated, Any, Final, Literal, Union
 
@@ -128,6 +128,8 @@ class SweepSimulation:
 
     base: Inputs
 
+    _input_coords: frozenset[str]
+
     def __init__(self, script: SweepScript, base: Inputs) -> None:
         sweep_coords = _script2coords(script, base)
 
@@ -139,6 +141,7 @@ class SweepSimulation:
         # arrays, it breaks when there are dimensions without coordinates.
         resolve_dataset = xr.Dataset(coords=sweep_coords)
         sweep_dims = resolve_dataset.indexes.dims
+        # self.sweep_spec = resolve_dataset
         self.sweep_spec = resolve_dataset.assign(
             grid=(
                 tuple(sweep_dims.keys()),
@@ -148,35 +151,42 @@ class SweepSimulation:
         self.base = base
 
         # TODO more robust input coordinate detection
-        input_coords = frozenset(
+        self._input_coords = frozenset(  # type: ignore
             coord
             for coord in self.sweep_spec.coords.keys()
             if any(coord.startswith(top_name) for top_name in INPUT_TOP_NAMES)  # type: ignore
         )
 
         # Populate sweep grid with input combinations.
-        with np.nditer(
-            self.sweep_spec.grid,
-            flags=["multi_index", "refs_ok"],
-            op_flags=["writeonly"],  # type: ignore
-        ) as it:
-            for x in it:
-                overrides = {
-                    k: v.item() if v.size == 1 else v.squeeze()
-                    for k, v in self.sweep_spec.isel(
-                        {
-                            dim: index
-                            for dim, index in zip(
-                                self.sweep_spec.grid.dims, it.multi_index
-                            )
-                        }
-                    ).coords.items()
-                    if k in input_coords
-                }
-                x[...] = base.replace(overrides)  # type: ignore
+        # with np.nditer(
+        #     self.sweep_spec.grid,
+        #     flags=["multi_index", "refs_ok"],
+        #     op_flags=["writeonly"],  # type: ignore
+        # ) as it:
+        #     for x in it:
+        #         overrides = {
+        #             k: v.item() if v.size == 1 else v.squeeze()
+        #             for k, v in self.sweep_spec.isel(
+        #                 {
+        #                     dim: index
+        #                     for dim, index in zip(
+        #                         self.sweep_spec.grid.dims, it.multi_index
+        #                     )
+        #                 }
+        #             ).coords.items()
+        #             if k in input_coords
+        #         }
+        #         x[...] = base.replace(overrides)  # type: ignore
 
-    def __getitem__(self, item: Any) -> Inputs | np.ndarray:
-        return self.sweep_spec.data_vars["grid"].data[item]
+    def __getitem__(self, item: tuple[int, ...]) -> Inputs | np.ndarray:
+        overrides = {
+            k: v.item() if v.size == 1 else v.squeeze()
+            for k, v in self.sweep_spec.isel(
+                {dim: index for dim, index in zip(self.sweep_spec.grid.dims, item)}
+            ).coords.items()
+            if k in self._input_coords
+        }
+        return self.base.replace(overrides)
 
     @property
     def sweep_size(self) -> int:
@@ -212,7 +222,7 @@ def _script2coords(script: SweepScript, base: Inputs) -> _CoordsDict:
                 sweep_spec, _is_special
             )
 
-            # Assume at least one parameter was specific, and that all parameter values
+            # Assume at least one parameter was not specific, and that all parameter values
             # have the same length.
             sweep_len = len(next(iter(sweep_parameters.values())))
 

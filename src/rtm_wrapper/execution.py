@@ -226,3 +226,13 @@ class ConcurrentExecutor(LocalMemoryExecutor):
                         raise
                 if step_callback is not None:
                     step_callback(idx)
+
+
+class ParallelConcurrentExecutor:
+    """
+    Executor that runs multiple ``ConcurrentExecutor``s in spawned subprocess.
+
+    This can improve performance over ``ConcurrentExecutor`` when simulation sweeps
+    are Python bounded, which can happen when individual simulator runs are fast or
+    when many simulation works are used.
+    """
