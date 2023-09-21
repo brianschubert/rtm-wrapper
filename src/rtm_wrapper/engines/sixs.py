@@ -65,6 +65,11 @@ class PySixSEngine(RTMEngine):
             transmittance_diffuse_up=t_diff_u,
             transmittance_total_gas=t_gas,
             total_transmission=total_transmission,
+            spherical_albedo=outputs.rat["spherical_albedo"].total,
+            single_scattering_albedo=outputs.rat["single_scattering_albedo"].total,
+            solar_spectrum=outputs.values["solar_spectrum"],
+            direct_solar_irradiance=outputs.values["direct_solar_irradiance"],
+            diffuse_solar_irradiance=outputs.values["diffuse_solar_irradiance"],
         )
 
 

@@ -41,6 +41,11 @@ OutputName: TypeAlias = Literal[
     "transmittance_diffuse_up",
     "transmittance_total_gas",
     "total_transmission",
+    "spherical_albedo",
+    "single_scattering_albedo",
+    "solar_spectrum",
+    "direct_solar_irradiance",
+    "diffuse_solar_irradiance",
 ]
 OUTPUT_NAMES: Final[frozenset[OutputName]] = frozenset(typing.get_args(OutputName))
 
@@ -114,6 +119,22 @@ class Outputs:
 
     total_transmission: Annotated[
         float, MetadataDict(title="Total Transmission", unit="1")
+    ]
+
+    spherical_albedo: Annotated[float, MetadataDict(title="Spherical Albedo")]
+
+    single_scattering_albedo: Annotated[
+        float, MetadataDict(title="Single Scattering Albedo")
+    ]
+
+    solar_spectrum: Annotated[float, MetadataDict(title="Solar Spectrum")]
+
+    direct_solar_irradiance: Annotated[
+        float, MetadataDict(title="Direct Solar irradiance")
+    ]
+
+    diffuse_solar_irradiance: Annotated[
+        float, MetadataDict(title="Diffuse Solar irradiance")
     ]
 
 
