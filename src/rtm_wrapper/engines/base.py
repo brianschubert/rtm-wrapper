@@ -1,18 +1,19 @@
 from __future__ import annotations
 
 import abc
-import dataclasses
 import inspect
 import typing
-from typing import Any, Callable, ClassVar
+from typing import Any, Callable, ClassVar, Generic, TypeVar
 
-from typing_extensions import Never, TypeAlias
+from typing_extensions import Concatenate, Never, ParamSpec, TypeAlias
 
 import rtm_wrapper.util as rtm_util
 from rtm_wrapper.parameters import Parameter
 from rtm_wrapper.simulation import INPUT_TOP_NAMES, Inputs, InputTopName, Outputs
 
-ParameterHandler: TypeAlias = Callable[..., None]
+P = ParamSpec("P")
+R = TypeVar("R", bound=Parameter)
+ParameterHandler: TypeAlias = Callable[Concatenate[R, P], None]
 
 
 class RTMEngine(abc.ABC):
@@ -20,7 +21,7 @@ class RTMEngine(abc.ABC):
     Base class for wrappers interfaces around specific RTMs.
     """
 
-    params: ClassVar[ParameterRegistry]
+    params: ClassVar[ParameterRegistry[...]]
 
     def __init_subclass__(cls, **kwargs: Any) -> None:
         super().__init_subclass__(**kwargs)
@@ -47,16 +48,18 @@ class RTMEngine(abc.ABC):
             handler(param_value, *handler_args, **handlers_kwargs)
 
 
-class ParameterRegistry:
-    param_implementations: dict[tuple[InputTopName, type[Parameter]], ParameterHandler]
+class ParameterRegistry(Generic[P]):
+    param_implementations: dict[
+        tuple[InputTopName, type[Parameter]], ParameterHandler[Parameter, P]
+    ]
 
     def __init__(self) -> None:
         self.param_implementations = {}
 
     def register(
         self, name: InputTopName, type_: type[Parameter] | None = None
-    ) -> Callable[[ParameterHandler], Callable[..., Never]]:
-        def _register(func: ParameterHandler) -> Callable[..., Never]:
+    ) -> Callable[[ParameterHandler[R, P]], ParameterHandler[R, P]]:
+        def _register(func: ParameterHandler[R, P]) -> Callable[..., Never]:
             if type_ is None:
                 # Infer type from annotation of first positional argument.
 
@@ -81,7 +84,9 @@ class ParameterRegistry:
                     f"parameter must be a Parameter subclass, got {param_type}"
                 )
 
-            self.param_implementations[(name, param_type)] = func
+            self.param_implementations[(name, param_type)] = typing.cast(
+                ParameterHandler[Parameter, P], func
+            )
             return _dont_call_parameter_handler
 
         return _register
