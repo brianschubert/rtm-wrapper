@@ -188,6 +188,9 @@ class OutputRegistry:
         def _register(func: OutputExtractor) -> OutputExtractor:
             output_name = name if name is not None else func.__name__
 
+            if output_name in self._extractors:
+                raise ValueError(f"output '{output_name}' already registered")
+
             if depends is not None:
                 output_dependencies = depends
             else:
