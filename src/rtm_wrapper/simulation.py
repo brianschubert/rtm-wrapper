@@ -1,10 +1,8 @@
 from __future__ import annotations
 
-import dataclasses
 import typing
-from collections.abc import Mapping, Sequence
-from dataclasses import dataclass
-from typing import Annotated, Any, Final, Literal, Union
+from collections.abc import Sequence
+from typing import Any, Final, Literal, Union
 
 import numpy as np
 import xarray as xr
@@ -31,23 +29,23 @@ INPUT_TOP_NAMES: Final[frozenset[InputTopName]] = frozenset(
     typing.get_args(InputTopName)
 )
 
-OutputName: TypeAlias = Literal[
-    "apparent_radiance",
-    "transmittance_scattering_down",
-    "transmittance_scattering_up",
-    "transmittance_direct_down",
-    "transmittance_direct_up",
-    "transmittance_diffuse_down",
-    "transmittance_diffuse_up",
-    "transmittance_total_gas",
-    "total_transmission",
-    "spherical_albedo",
-    "single_scattering_albedo",
-    "solar_spectrum",
-    "direct_solar_irradiance",
-    "diffuse_solar_irradiance",
-]
-OUTPUT_NAMES: Final[frozenset[OutputName]] = frozenset(typing.get_args(OutputName))
+# OutputName: TypeAlias = Literal[
+#     "apparent_radiance",
+#     "transmittance_scattering_down",
+#     "transmittance_scattering_up",
+#     "transmittance_direct_down",
+#     "transmittance_direct_up",
+#     "transmittance_diffuse_down",
+#     "transmittance_diffuse_up",
+#     "transmittance_total_gas",
+#     "total_transmission",
+#     "spherical_albedo",
+#     "single_scattering_albedo",
+#     "solar_spectrum",
+#     "direct_solar_irradiance",
+#     "diffuse_solar_irradiance",
+# ]
+# OUTPUT_NAMES: Final[frozenset[OutputName]] = frozenset(typing.get_args(OutputName))
 
 ParameterValues: TypeAlias = Sequence[Any]
 SweepScript: TypeAlias = dict[str, Union[ParameterValues, dict[str, Any]]]
@@ -77,65 +75,65 @@ class Inputs(Parameter):
     wavelength = ParameterField(Parameter)
 
 
-@dataclass
-class Outputs:
-    """
-    Common output format for RTM simulations.
-
-    Temporary / unstable representation.
-    """
-
-    apparent_radiance: Annotated[
-        float, MetadataDict(title="Apparent Radiance", unit="W/sr-m^2")
-    ]
-
-    transmittance_scattering_down: Annotated[
-        float, MetadataDict(title="Downward Scattering", unit="1")
-    ]
-
-    transmittance_scattering_up: Annotated[
-        float, MetadataDict(title="Upward Scattering", unit="1")
-    ]
-
-    transmittance_direct_down: Annotated[
-        float, MetadataDict(title="Direct Downward Transmittance", unit="1")
-    ]
-
-    transmittance_direct_up: Annotated[
-        float, MetadataDict(title="Direct Upward Transmittance", unit="1")
-    ]
-
-    transmittance_diffuse_down: Annotated[
-        float, MetadataDict(title="Diffuse Downward Transmittance", unit="1")
-    ]
-
-    transmittance_diffuse_up: Annotated[
-        float, MetadataDict(title="Diffuse Downward Transmittance", unit="1")
-    ]
-
-    transmittance_total_gas: Annotated[
-        float, MetadataDict(title="Total Gas Transmittance", unit="1")
-    ]
-
-    total_transmission: Annotated[
-        float, MetadataDict(title="Total Transmission", unit="1")
-    ]
-
-    spherical_albedo: Annotated[float, MetadataDict(title="Spherical Albedo")]
-
-    single_scattering_albedo: Annotated[
-        float, MetadataDict(title="Single Scattering Albedo")
-    ]
-
-    solar_spectrum: Annotated[float, MetadataDict(title="Solar Spectrum")]
-
-    direct_solar_irradiance: Annotated[
-        float, MetadataDict(title="Direct Solar irradiance")
-    ]
-
-    diffuse_solar_irradiance: Annotated[
-        float, MetadataDict(title="Diffuse Solar irradiance")
-    ]
+# @dataclass
+# class Outputs:
+#     """
+#     Common output format for RTM simulations.
+#
+#     Temporary / unstable representation.
+#     """
+#
+#     apparent_radiance: Annotated[
+#         float, MetadataDict(title="Apparent Radiance", unit="W/sr-m^2")
+#     ]
+#
+#     transmittance_scattering_down: Annotated[
+#         float, MetadataDict(title="Downward Scattering", unit="1")
+#     ]
+#
+#     transmittance_scattering_up: Annotated[
+#         float, MetadataDict(title="Upward Scattering", unit="1")
+#     ]
+#
+#     transmittance_direct_down: Annotated[
+#         float, MetadataDict(title="Direct Downward Transmittance", unit="1")
+#     ]
+#
+#     transmittance_direct_up: Annotated[
+#         float, MetadataDict(title="Direct Upward Transmittance", unit="1")
+#     ]
+#
+#     transmittance_diffuse_down: Annotated[
+#         float, MetadataDict(title="Diffuse Downward Transmittance", unit="1")
+#     ]
+#
+#     transmittance_diffuse_up: Annotated[
+#         float, MetadataDict(title="Diffuse Downward Transmittance", unit="1")
+#     ]
+#
+#     transmittance_total_gas: Annotated[
+#         float, MetadataDict(title="Total Gas Transmittance", unit="1")
+#     ]
+#
+#     total_transmission: Annotated[
+#         float, MetadataDict(title="Total Transmission", unit="1")
+#     ]
+#
+#     spherical_albedo: Annotated[float, MetadataDict(title="Spherical Albedo")]
+#
+#     single_scattering_albedo: Annotated[
+#         float, MetadataDict(title="Single Scattering Albedo")
+#     ]
+#
+#     solar_spectrum: Annotated[float, MetadataDict(title="Solar Spectrum")]
+#
+#     direct_solar_irradiance: Annotated[
+#         float, MetadataDict(title="Direct Solar irradiance")
+#     ]
+#
+#     diffuse_solar_irradiance: Annotated[
+#         float, MetadataDict(title="Diffuse Solar irradiance")
+#     ]
 
 
 class SweepSimulation:
@@ -298,7 +296,7 @@ def _is_grid_coord(coord_name: str) -> bool:
 #     raise ImportError(
 #         "Detected misconfiguration in the available input names. This is a bug."
 #     )
-if not {f.name for f in dataclasses.fields(Outputs)} == set(OUTPUT_NAMES):
-    raise ImportError(
-        "Detected misconfiguration in the available output names. This is a bug."
-    )
+# if not {f.name for f in dataclasses.fields(Outputs)} == set(OUTPUT_NAMES):
+#     raise ImportError(
+#         "Detected misconfiguration in the available output names. This is a bug."
+#     )

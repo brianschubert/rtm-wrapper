@@ -8,7 +8,6 @@ import gzip
 import logging
 import multiprocessing
 import pickle
-import typing
 from abc import ABC
 from typing import Any, Callable, Iterable, Literal
 
@@ -16,8 +15,8 @@ import numpy as np
 import xarray as xr
 
 import rtm_wrapper.util as rtm_util
-from rtm_wrapper.engines.base import RTMEngine
-from rtm_wrapper.simulation import OUTPUT_NAMES, OutputName, Outputs, SweepSimulation
+from rtm_wrapper.engines.base import EngineOutputs, OutputName, RTMEngine
+from rtm_wrapper.simulation import SweepSimulation
 
 
 class SweepExecutor(abc.ABC):
@@ -54,19 +53,9 @@ class LocalMemoryExecutor(SweepExecutor, ABC):
         self,
         sweep: SweepSimulation,
         engine: RTMEngine,
-        *,
-        outputs: Iterable[OutputName] | None = None,
         **kwargs: Any,
     ) -> None:
-        if outputs is not None:
-            outputs = frozenset(outputs)
-            extraneous_outputs = outputs - OUTPUT_NAMES
-            if extraneous_outputs:
-                raise ValueError(f"unknown output names {list(extraneous_outputs)}")
-        else:
-            outputs = OUTPUT_NAMES
-
-        self._allocate_results_like(sweep.sweep_spec, outputs)
+        self._allocate_results_like(sweep.sweep_spec, engine)
         assert self._results is not None  # for type checker
 
         sim_start = datetime.datetime.now().astimezone().isoformat()
@@ -99,16 +88,17 @@ class LocalMemoryExecutor(SweepExecutor, ABC):
         return self._results
 
     def _allocate_results_like(
-        self, sweep_spec: xr.Dataset, variables: Iterable[OutputName]
+        self,
+        sweep_spec: xr.Dataset,
+        engine: RTMEngine,
     ) -> None:
         data_vars = {}
 
         sweep_dims = sweep_spec.indexes.dims
 
-        # Preallocate variables for each requested output.
-        outputs_hints = typing.get_type_hints(Outputs, include_extras=True)
-        for output_name in variables:
-            output_type, output_metadata = typing.get_args(outputs_hints[output_name])
+        for output_name in engine.requested_outputs:
+            output_type = engine.outputs._dtypes[output_name]
+            output_metadata = engine.outputs._metadata[output_name]
             data_vars[output_name] = (
                 # All output variables have the same shape as the input grid.
                 tuple(sweep_dims.keys()),
@@ -131,22 +121,25 @@ class SerialExecutor(LocalMemoryExecutor):
         step_callback: Callable[[tuple[int, ...]], None] | None = None,
         **kwargs: Any,
     ) -> None:
-        assert self._results is not None  # for type checker
+        # TODO update
+        raise NotImplementedError
 
-        if kwargs:
-            raise ValueError(f"unknown kwargs {kwargs}")
-
-        with np.nditer(
-            sweep.sweep_spec.grid.data, flags=["multi_index", "refs_ok"]
-        ) as it:
-            for inputs in it:
-                out = engine.run_simulation(inputs.item())  # type: ignore
-                for output_name in self._results.keys():
-                    self._results.data_vars[output_name][it.multi_index] = getattr(
-                        out, output_name  # type: ignore
-                    )
-                if step_callback is not None:
-                    step_callback(it.multi_index)
+        # assert self._results is not None  # for type checker
+        #
+        # if kwargs:
+        #     raise ValueError(f"unknown kwargs {kwargs}")
+        #
+        # with np.nditer(
+        #     sweep.sweep_spec.grid.data, flags=["multi_index", "refs_ok"]
+        # ) as it:
+        #     for inputs in it:
+        #         out = engine.run_simulation(inputs.item())  # type: ignore
+        #         for output_name in self._results.keys():
+        #             self._results.data_vars[output_name][it.multi_index] = getattr(
+        #                 out, output_name  # type: ignore
+        #             )
+        #         if step_callback is not None:
+        #             step_callback(it.multi_index)
 
 
 class ConcurrentExecutor(LocalMemoryExecutor):
@@ -198,7 +191,7 @@ class ConcurrentExecutor(LocalMemoryExecutor):
             max_workers=self._max_workers
         ) as executor:
 
-            def target(idx: tuple[int, ...]) -> Outputs:
+            def target(idx: tuple[int, ...]) -> EngineOutputs:
                 return engine.run_simulation(sweep[idx])  # type: ignore
 
             futures_to_index = {
@@ -211,9 +204,7 @@ class ConcurrentExecutor(LocalMemoryExecutor):
                 try:
                     out = future.result()
                     for output_name in self._results.keys():
-                        self._results.variables[output_name][idx] = getattr(
-                            out, output_name  # type: ignore
-                        )
+                        self._results.variables[output_name][idx] = out[output_name]
                 except Exception as ex:
                     error_input = sweep[idx]
                     logger.error(

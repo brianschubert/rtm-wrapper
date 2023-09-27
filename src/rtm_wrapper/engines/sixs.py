@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 import copy
-import math
 import typing
+from collections.abc import Iterable
 from dataclasses import dataclass
 from typing import ClassVar, Literal, TypedDict
 
@@ -13,8 +13,13 @@ from nptyping import Float, Int, NDArray, Object, Structure
 from typing_extensions import TypeAlias
 
 import rtm_wrapper.parameters as rtm_param
-from rtm_wrapper.engines.base import ParameterRegistry, RTMEngine
-from rtm_wrapper.simulation import Inputs, Outputs
+from rtm_wrapper.engines.base import (
+    EngineOutputs,
+    OutputName,
+    ParameterRegistry,
+    RTMEngine,
+)
+from rtm_wrapper.simulation import Inputs
 
 
 class PySixSEngine(RTMEngine):
@@ -22,57 +27,75 @@ class PySixSEngine(RTMEngine):
 
     params: ClassVar[ParameterRegistry[[Py6S.SixS]]]
 
-    def __init__(self, wrapper: Py6S.SixS | None = None) -> None:
+    virtual_outputs: ClassVar = ("py6s_values", "py6s_trans", "py6s_rat")
+
+    default_outputs: ClassVar = ("apparent_radiance",)
+
+    def __init__(
+        self,
+        wrapper: Py6S.SixS | None = None,
+        *,
+        outputs: Iterable[OutputName] | None = None,
+    ) -> None:
         if wrapper is None:
             wrapper = make_sixs_wrapper()
         if wrapper.sixs_path is None:
             raise ValueError("misconfigured wrapper - sixs_path not defined")
         self._base_wrapper = wrapper
 
-    def run_simulation(self, inputs: Inputs) -> Outputs:
+        super().__init__(outputs=outputs)
+
+    def run_simulation(self, inputs: Inputs) -> EngineOutputs:
         wrapper = copy.deepcopy(self._base_wrapper)
-        self.load_inputs(inputs, wrapper)
+        self.params.process(inputs, wrapper)
 
         wrapper.run()
-        outputs = wrapper.outputs
+        sixs_outputs = wrapper.outputs
 
-        # Extract select outputs.
-        cos_zenith_solar = math.cos(math.radians(outputs.values["solar_z"]))
-        cos_zenith_view = math.cos(math.radians(outputs.values["view_z"]))
-        m_optical_depth_total = -outputs.rat["optical_depth_total"].total
-        total_scattering = outputs.trans["total_scattering"]
-        t_scat_d, t_scat_u = total_scattering.downward, total_scattering.upward
+        outputs: EngineOutputs = {}
+        outputs["py6s_values"] = sixs_outputs.values
+        outputs["py6s_trans"] = sixs_outputs.trans
+        outputs["py6s_rat"] = sixs_outputs.rat
+        self._extract_outputs(outputs)
+        return outputs
 
-        # Derive transmittances
-        t_dir_d = math.exp(m_optical_depth_total / cos_zenith_solar)
-        t_dir_u = math.exp(m_optical_depth_total / cos_zenith_view)
-        t_diff_d = t_scat_d - t_dir_d
-        t_diff_u = t_scat_u - t_dir_u
-        t_gas = outputs.trans["global_gas"].total
-
-        total_transmission = (
-            t_dir_d * t_dir_u
-            + t_diff_d * t_dir_u
-            + t_dir_d * t_diff_u
-            + t_diff_d * t_diff_u
-        ) * t_gas
-
-        return Outputs(
-            apparent_radiance=outputs.values["apparent_radiance"],
-            transmittance_scattering_down=t_scat_d,
-            transmittance_scattering_up=t_scat_u,
-            transmittance_direct_down=t_dir_d,
-            transmittance_direct_up=t_dir_u,
-            transmittance_diffuse_down=t_diff_d,
-            transmittance_diffuse_up=t_diff_u,
-            transmittance_total_gas=t_gas,
-            total_transmission=total_transmission,
-            spherical_albedo=outputs.rat["spherical_albedo"].total,
-            single_scattering_albedo=outputs.rat["single_scattering_albedo"].total,
-            solar_spectrum=outputs.values["solar_spectrum"],
-            direct_solar_irradiance=outputs.values["direct_solar_irradiance"],
-            diffuse_solar_irradiance=outputs.values["diffuse_solar_irradiance"],
-        )
+        # # Extract select outputs.
+        # cos_zenith_solar = math.cos(math.radians(outputs.values["solar_z"]))
+        # cos_zenith_view = math.cos(math.radians(outputs.values["view_z"]))
+        # m_optical_depth_total = -outputs.rat["optical_depth_total"].total
+        # total_scattering = outputs.trans["total_scattering"]
+        # t_scat_d, t_scat_u = total_scattering.downward, total_scattering.upward
+        #
+        # # Derive transmittances
+        # t_dir_d = math.exp(m_optical_depth_total / cos_zenith_solar)
+        # t_dir_u = math.exp(m_optical_depth_total / cos_zenith_view)
+        # t_diff_d = t_scat_d - t_dir_d
+        # t_diff_u = t_scat_u - t_dir_u
+        # t_gas = outputs.trans["global_gas"].total
+        #
+        # total_transmission = (
+        #     t_dir_d * t_dir_u
+        #     + t_diff_d * t_dir_u
+        #     + t_dir_d * t_diff_u
+        #     + t_diff_d * t_diff_u
+        # ) * t_gas
+        #
+        # return EngineOutputs(
+        #     apparent_radiance=outputs.values["apparent_radiance"],
+        #     transmittance_scattering_down=t_scat_d,
+        #     transmittance_scattering_up=t_scat_u,
+        #     transmittance_direct_down=t_dir_d,
+        #     transmittance_direct_up=t_dir_u,
+        #     transmittance_diffuse_down=t_diff_d,
+        #     transmittance_diffuse_up=t_diff_u,
+        #     transmittance_total_gas=t_gas,
+        #     total_transmission=total_transmission,
+        #     spherical_albedo=outputs.rat["spherical_albedo"].total,
+        #     single_scattering_albedo=outputs.rat["single_scattering_albedo"].total,
+        #     solar_spectrum=outputs.values["solar_spectrum"],
+        #     direct_solar_irradiance=outputs.values["direct_solar_irradiance"],
+        #     diffuse_solar_irradiance=outputs.values["diffuse_solar_irradiance"],
+        # )
 
 
 def pysixs_default_inputs() -> Inputs:
@@ -477,3 +500,8 @@ def make_sixs_wrapper() -> Py6S.SixS:
             f"feature enabled to compile and install a local 6S binary."
         )
     return s
+
+
+@PySixSEngine.outputs.register(title="Apparent Radiance", unit="W/sr-m^2")
+def apparent_radiance(py6s_values: _OutputDict) -> float:
+    return py6s_values["apparent_radiance"]
