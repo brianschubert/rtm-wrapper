@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import copy
+import math
 import operator
 import typing
 from collections.abc import Iterable
@@ -31,7 +32,17 @@ class PySixSEngine(RTMEngine):
 
     virtual_outputs: ClassVar = ("py6s_values", "py6s_trans", "py6s_rat")
 
-    default_outputs: ClassVar = ("apparent_radiance",)
+    default_outputs: ClassVar = (
+        "apparent_radiance",
+        "transmittance_direct_down",
+        "transmittance_direct_up",
+        "transmittance_diffuse_down",
+        "transmittance_diffuse_up",
+        "transmittance_scattering_down",
+        "transmittance_scattering_up",
+        "total_transmission",
+        "spherical_albedo",
+    )
 
     def __init__(
         self,
@@ -567,9 +578,85 @@ def _register_py6s_outputs() -> None:
             )
 
 
+_register_py6s_outputs()
+
+
 @PySixSEngine.outputs.register(title="Apparent Radiance", unit="W/sr-m^2")
 def apparent_radiance(py6s_values: _OutputDict) -> float:
     return py6s_values["apparent_radiance"]
 
 
-_register_py6s_outputs()
+@PySixSEngine.outputs.register(title="Cosine Zenith Solar", unit="1")
+def cos_zenith_solar(py6s_solar_z: float) -> float:
+    m = math
+    return m.cos(m.radians(py6s_solar_z))
+
+
+@PySixSEngine.outputs.register(title="Cosine Zenith View", unit="1")
+def cos_zenith_view(py6s_view_z: float) -> float:
+    m = math
+    return m.cos(m.radians(py6s_view_z))
+
+
+@PySixSEngine.outputs.register(title="Direct Downward Transmittance", unit="1")
+def transmittance_direct_down(
+    py6s_optical_depth_total_total: float, cos_zenith_solar: float
+) -> float:
+    return math.exp(-py6s_optical_depth_total_total / cos_zenith_solar)
+
+
+@PySixSEngine.outputs.register(title="Direct Upward Transmittance", unit="1")
+def transmittance_direct_up(
+    py6s_optical_depth_total_total: float, cos_zenith_view: float
+) -> float:
+    return math.exp(-py6s_optical_depth_total_total / cos_zenith_view)
+
+
+@PySixSEngine.outputs.register(title="Diffuse Downward Transmittance", unit="1")
+def transmittance_diffuse_down(
+    py6s_transmittance_total_scattering_downward: float,
+    transmittance_direct_down: float,
+) -> float:
+    return py6s_transmittance_total_scattering_downward - transmittance_direct_down
+
+
+@PySixSEngine.outputs.register(title="Diffuse Upward Transmittance", unit="1")
+def transmittance_diffuse_up(
+    py6s_transmittance_total_scattering_upward: float, transmittance_direct_up: float
+) -> float:
+    return py6s_transmittance_total_scattering_upward - transmittance_direct_up
+
+
+@PySixSEngine.outputs.register(title="Total Transmission", unit="1")
+def total_transmission(
+    transmittance_direct_down: float,
+    transmittance_direct_up: float,
+    transmittance_diffuse_down: float,
+    transmittance_diffuse_up: float,
+    py6s_transmittance_global_gas_total: float,
+) -> float:
+    return (
+        transmittance_direct_down * transmittance_direct_up
+        + transmittance_diffuse_down * transmittance_direct_up
+        + transmittance_direct_down * transmittance_diffuse_up
+        + transmittance_diffuse_down * transmittance_diffuse_up
+    ) * py6s_transmittance_global_gas_total
+
+
+@PySixSEngine.outputs.register(title="Downward Scattering", unit="1")
+def transmittance_scattering_down(
+    py6s_transmittance_total_scattering_downward,
+) -> float:
+    return py6s_transmittance_total_scattering_downward
+
+
+@PySixSEngine.outputs.register(title="Upward Scattering", unit="1")
+def transmittance_scattering_up(
+    py6s_transmittance_total_scattering_upward,
+) -> float:
+    return py6s_transmittance_total_scattering_upward
+
+
+@PySixSEngine.outputs.register(title="Spherical Albedo", unit="1")
+def spherical_albedo(py6s_spherical_albedo_total: float) -> float:
+    return py6s_spherical_albedo_total
