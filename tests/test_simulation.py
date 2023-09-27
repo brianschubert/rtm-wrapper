@@ -6,6 +6,26 @@ from rtm_wrapper.execution import SerialExecutor
 from rtm_wrapper.simulation import SweepSimulation
 
 
+def test_sweep_layout() -> None:
+    wl = np.arange(0.2, 2.5, 0.1)
+    atmo = ["a", "b", "c"]
+
+    sweep = SweepSimulation(
+        {
+            "wavelength.value": wl,
+            "atmosphere.name": atmo,
+        },
+        base=pysixs_default_inputs(),
+    )
+
+    assert list(sweep.dims.items()) == [
+        ("wavelength.value", wl.size),
+        ("atmosphere.name", len(atmo)),
+    ]
+    assert sweep.sweep_size == len(wl) * len(atmo)
+    assert sweep.sweep_shape == (len(wl), len(atmo))
+
+
 def test_sweep_basic_single() -> None:
     wl = np.arange(0.2, 2.5, 0.1)
 
@@ -25,8 +45,8 @@ def test_sweep_basic_single() -> None:
 
 
 def test_sweep_basic_product() -> None:
-    wl = np.arange(0.2, 2.5, 0.1)
-    ozone = np.arange(0.25, 0.46, 0.5)
+    wl = np.arange(0.2, 2.5, 0.2)
+    ozone = np.arange(0.25, 0.46, 0.05)
     water = np.arange(1, 5, 1)
 
     script = {
@@ -126,3 +146,50 @@ def test_sweep_basic_array_valued() -> None:
         "ground.target.spectrum/0": mock_spectrum_target.size,
         "ground.background.spectrum/0": mock_spectrum_target.size,
     }
+
+
+def test_sweep_split() -> None:
+    wl = np.arange(0.27, 2.5, 0.01)
+    ozone = np.arange(0.25, 0.46, 0.05)
+    water = np.arange(1, 5, 1)
+
+    assert wl.size == 223
+
+    script = {
+        "wavelength.value": wl,
+        "atmosphere.ozone": ozone,
+        "atmosphere.water": water,
+    }
+
+    sweep = SweepSimulation(
+        script,
+        base=pysixs_default_inputs().replace(
+            atmosphere=rtm_param.AtmosphereWaterOzone()
+        ),
+    )
+
+    split_dim = "wavelength.value"
+    num_splits = 5
+    split_sweeps = list(sweep.split(num_splits, split_dim))
+    assert len(split_sweeps) == num_splits
+
+    # Verify that splits contain the expected number of coordinate elements.
+    residue = 223 % 5
+    num_big = num_splits - residue
+    for full_sweep in split_sweeps[:num_big]:
+        assert dict(full_sweep.dims.items()) == {
+            "wavelength.value": (223 // 5) + 1,
+            "atmosphere.ozone": ozone.size,
+            "atmosphere.water": water.size,
+        }
+    for full_sweep in split_sweeps[num_splits:]:
+        assert dict(full_sweep.dims.items()) == {
+            "wavelength.value": (223 // 5),
+            "atmosphere.ozone": ozone.size,
+            "atmosphere.water": water.size,
+        }
+
+    # Verify that the split coordinates stack back into the original coordinates.
+    np.testing.assert_equal(
+        wl, np.hstack([s.sweep_spec.coords[split_dim].values for s in split_sweeps])
+    )

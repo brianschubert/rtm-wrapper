@@ -1,7 +1,10 @@
 from __future__ import annotations
 
+import copy
+import math
+import operator
 import typing
-from collections.abc import Sequence
+from collections.abc import Iterable, Mapping, Sequence
 from typing import Any, Final, Literal, Union
 
 import numpy as np
@@ -152,21 +155,9 @@ class SweepSimulation:
     def __init__(self, script: SweepScript, base: Inputs) -> None:
         sweep_coords = _script2coords(script, base)
 
-        # TODO maybe tidy.
-        # TODO update outdated comment below
-        # We create an intermediate empty dataset to validate the sweep coordinates
+        # Create an empty dataset to validate the sweep coordinates
         # and to resolve the dimension sizes.
-        # Unfortunately, while xr.DataArray supports the creation of empty/default-filled
-        # arrays, it breaks when there are dimensions without coordinates.
-        resolve_dataset = xr.Dataset(coords=sweep_coords)
-        sweep_dims = resolve_dataset.indexes.dims
-        # self.sweep_spec = resolve_dataset
-        self.sweep_spec = resolve_dataset.assign(
-            grid=(
-                tuple(sweep_dims.keys()),
-                np.empty(tuple(sweep_dims.values()), dtype=object),
-            )
-        )
+        self.sweep_spec = xr.Dataset(coords=sweep_coords)
         self.base = base
 
         # TODO more robust input coordinate detection
@@ -201,19 +192,48 @@ class SweepSimulation:
         overrides = {
             k: v.item() if v.size == 1 else v.squeeze()
             for k, v in self.sweep_spec.isel(
-                {dim: index for dim, index in zip(self.sweep_spec.grid.dims, item)}
+                {dim: index for dim, index in zip(self.dims.keys(), item)}
             ).coords.items()
             if k in self._input_coords
         }
         return self.base.replace(overrides)
 
     @property
+    def dims(self) -> Mapping[str, int]:
+        return self.sweep_spec.indexes.dims  # type: ignore
+
+    @property
     def sweep_size(self) -> int:
-        return self.sweep_spec.data_vars["grid"].data.size
+        return math.prod(self.sweep_shape)
 
     @property
     def sweep_shape(self) -> tuple[int, ...]:
-        return self.sweep_spec.data_vars["grid"].data.shape
+        return tuple(self.dims.values())
+
+    def split(
+        self, sections: int | Sequence[int], dim: str
+    ) -> Iterable[SweepSimulation]:
+        # TODO: decide on default value, if any.
+        # if dim is None:
+        # Pick first.
+        # dim = next(iter(self.dims.keys()))
+        # Pick largest.
+        # dim = max(self.dims.items(), key=operator.itemgetter(1))[0]
+
+        try:
+            indices = np.arange(self.dims[dim])
+        except KeyError:
+            raise ValueError(
+                f"invalid dim '{dim}' - must be one of {list(self.dims.keys())}"
+            )
+
+        section_indices = np.array_split(indices, sections)
+
+        for sec_idx in section_indices:
+            # Make shallow copy.
+            sweep_section = copy.copy(self)
+            sweep_section.sweep_spec = self.sweep_spec.isel({dim: sec_idx})
+            yield sweep_section
 
 
 _CoordsDict: TypeAlias = dict[str, tuple[Sequence[str], Sequence[Any], MetadataDict]]
