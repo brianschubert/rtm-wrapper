@@ -1,10 +1,11 @@
 from __future__ import annotations
 
 import copy
+import operator
 import typing
 from collections.abc import Iterable
 from dataclasses import dataclass
-from typing import ClassVar, Literal, TypedDict
+from typing import Annotated, Any, Callable, ClassVar, Literal, TypedDict
 
 import numpy as np
 import Py6S
@@ -19,6 +20,7 @@ from rtm_wrapper.engines.base import (
     ParameterRegistry,
     RTMEngine,
 )
+from rtm_wrapper.parameters import MetadataDict
 from rtm_wrapper.simulation import Inputs
 
 
@@ -52,10 +54,11 @@ class PySixSEngine(RTMEngine):
         wrapper.run()
         sixs_outputs = wrapper.outputs
 
-        outputs: EngineOutputs = {}
-        outputs["py6s_values"] = sixs_outputs.values
-        outputs["py6s_trans"] = sixs_outputs.trans
-        outputs["py6s_rat"] = sixs_outputs.rat
+        outputs: EngineOutputs = {
+            "py6s_values": sixs_outputs.values,
+            "py6s_trans": sixs_outputs.trans,
+            "py6s_rat": sixs_outputs.rat,
+        }
         self._extract_outputs(outputs)
         return outputs
 
@@ -295,7 +298,9 @@ class _OutputDict(TypedDict):
     ground_pressure: float
     ground_altitude: float
     apparent_reflectance: float
-    apparent_radiance: float
+    apparent_radiance: Annotated[
+        float, MetadataDict(title="Apparent Radiance", unit="W/sr-m^2")
+    ]
     total_gaseous_transmittance: float
     wv_above_aerosol: float
     wv_mixed_with_aerosol: float
@@ -502,6 +507,69 @@ def make_sixs_wrapper() -> Py6S.SixS:
     return s
 
 
+def _item_attr_getter(item: Any, attr: str) -> Callable[[Any], Any]:
+    """Return a callable that fetches ``obj[item].attr`` from a given object ``obj``."""
+    get_item = operator.itemgetter(item)
+    get_attr = operator.attrgetter(attr)
+
+    def getter(obj: Any) -> Any:
+        return get_attr(get_item(obj))
+
+    return getter
+
+
+def _register_py6s_outputs() -> None:
+    """
+    Register outputs for all available Py6S outputs with a ``py6s_`` prefix.
+    """
+    for value_name, output_hints in typing.get_type_hints(
+        _OutputDict, include_extras=True
+    ).items():
+        if typing.get_origin(output_hints) is Annotated:
+            dtype, metadata = typing.get_args(output_hints)
+        else:
+            dtype = output_hints
+            metadata = {}
+
+        metadata.setdefault("title", value_name.replace("_", " ").title())
+
+        PySixSEngine.outputs.register(
+            operator.itemgetter(value_name),
+            name=f"py6s_{value_name}",
+            depends=("py6s_values",),
+            dtype=dtype,
+            **metadata,
+        )
+
+    for trans_name in typing.get_args(_TransmittanceName):
+        for component in ("upward", "downward", "total"):
+            title = (
+                f"{component.capitalize()}"
+                f" {trans_name.replace('_', ' ').title()} Transmittance"
+            )
+            PySixSEngine.outputs.register(
+                _item_attr_getter(trans_name, component),
+                name=f"py6s_transmittance_{trans_name}_{component}",
+                depends=("py6s_trans",),
+                dtype=np.dtype(float),
+                title=title,
+                unit="1",
+            )
+    for rat_name in typing.get_args(_RatName):
+        for component in ("rayleigh", "aerosol", "total"):
+            title = f"{component.capitalize()}" f" {rat_name.replace('_', ' ').title()}"
+            PySixSEngine.outputs.register(
+                _item_attr_getter(rat_name, component),
+                name=f"py6s_{rat_name}_{component}",
+                depends=("py6s_rat",),
+                dtype=np.dtype(float),
+                title=title,
+            )
+
+
 @PySixSEngine.outputs.register(title="Apparent Radiance", unit="W/sr-m^2")
 def apparent_radiance(py6s_values: _OutputDict) -> float:
     return py6s_values["apparent_radiance"]
+
+
+_register_py6s_outputs()
