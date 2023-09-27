@@ -54,7 +54,7 @@ class RTMEngine(abc.ABC):
         # them as dependencies.
         for output_name in cls.virtual_outputs:
             cls.outputs.register(
-                _trap("attempted to extract virtual output - this is a bug"),
+                rtm_util.trap("attempted to extract virtual output - this is a bug"),
                 depends=(),
                 name=output_name,
             )
@@ -73,8 +73,10 @@ class RTMEngine(abc.ABC):
     def requested_outputs(self, outputs: tuple[OutputName, ...]) -> None:
         not_implemented = frozenset(outputs).difference(self.outputs.names)
         if not_implemented:
-            raise ValueError(f"unknown outputs {not_implemented}")
+            raise ValueError(
                 f"unknown outputs {list(not_implemented)}."
+                f" See '{self.__class__.__name__}.outputs.names' for available outputs."
+            )
 
         self._requested_outputs = outputs
 
@@ -147,7 +149,7 @@ class ParameterRegistry(Generic[P]):
             self.param_implementations[(name, param_type)] = typing.cast(
                 ParameterHandler[Parameter, P], func
             )
-            return _trap(
+            return rtm_util.trap(
                 "parameter handler should not be called directly. "
                 "Access the handler through corresponding engine's ParameterRegistry"
             )
@@ -239,7 +241,7 @@ class OutputRegistry:
             return _register
         else:
             _register(func)
-            return _trap(
+            return rtm_util.trap(
                 f"{self.__class__.__name__}.{self.__class__.register.__name__} "
                 f"cannot be used as decorator when func is passed"
             )
@@ -266,10 +268,3 @@ class OutputRegistry:
         return tuple(
             step for step in graph_order.static_order() if step in required_extractions
         )
-
-
-def _trap(message: str) -> Callable[..., Never]:
-    def _raise(*args: Any, **kwargs: Any) -> Never:
-        raise RuntimeError(f"{message} - called with {args=}, {kwargs=}")
-
-    return _raise

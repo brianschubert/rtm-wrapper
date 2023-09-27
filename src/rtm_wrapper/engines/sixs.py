@@ -96,8 +96,6 @@ class _OutputDict(TypedDict):
 
 
 class PySixSEngine(RTMEngine):
-    _base_wrapper: Py6S.SixS
-
     params: ClassVar[ParameterRegistry[[Py6S.SixS]]]
 
     virtual_outputs: ClassVar = ("py6s_values", "py6s_trans", "py6s_rat")
@@ -114,6 +112,8 @@ class PySixSEngine(RTMEngine):
         "spherical_albedo",
     )
 
+    _base_wrapper: Py6S.SixS
+
     def __init__(
         self,
         wrapper: Py6S.SixS | None = None,
@@ -129,6 +129,9 @@ class PySixSEngine(RTMEngine):
         super().__init__(outputs=outputs)
 
     def run_simulation(self, inputs: Inputs) -> EngineOutputs:
+        # Note: this implementation avoids mutating any instance state so that it can
+        # be safely run from multiple threads on the same object.
+
         wrapper = copy.deepcopy(self._base_wrapper)
         self.params.process(inputs, wrapper)
 
@@ -356,14 +359,14 @@ def total_transmission(
 
 @PySixSEngine.outputs.register(title="Downward Scattering", unit="1")
 def transmittance_scattering_down(
-    py6s_transmittance_total_scattering_downward,
+    py6s_transmittance_total_scattering_downward: float,
 ) -> float:
     return py6s_transmittance_total_scattering_downward
 
 
 @PySixSEngine.outputs.register(title="Upward Scattering", unit="1")
 def transmittance_scattering_up(
-    py6s_transmittance_total_scattering_upward,
+    py6s_transmittance_total_scattering_upward: float,
 ) -> float:
     return py6s_transmittance_total_scattering_upward
 
