@@ -19,12 +19,13 @@ P = ParamSpec("P")
 R = TypeVar("R", bound=Parameter)
 
 OutputName: TypeAlias = str
+Output: TypeAlias = Any
 
 # Decorator targets.
 ParameterHandler: TypeAlias = Callable[Concatenate[R, P], None]
 
-EngineOutputs: TypeAlias = dict[OutputName, Any]
-OutputExtractor: TypeAlias = Callable[..., Any]
+EngineOutputs: TypeAlias = dict[OutputName, Output]
+OutputExtractor: TypeAlias = Callable[..., Output]
 
 
 class RTMEngine(abc.ABC):
@@ -65,18 +66,15 @@ class RTMEngine(abc.ABC):
         self.requested_outputs = tuple(outputs)
 
     @property
-    def available_outputs(self) -> tuple[OutputName, ...]:
-        return tuple(self.outputs._extractors.keys())
-
-    @property
     def requested_outputs(self) -> tuple[OutputName, ...]:
         return self._requested_outputs
 
     @requested_outputs.setter
     def requested_outputs(self, outputs: tuple[OutputName, ...]) -> None:
-        not_implemented = frozenset(outputs) - self.outputs._extractors.keys()
+        not_implemented = frozenset(outputs).difference(self.outputs.names)
         if not_implemented:
             raise ValueError(f"unknown outputs {not_implemented}")
+                f"unknown outputs {list(not_implemented)}."
 
         self._requested_outputs = outputs
 
@@ -180,6 +178,10 @@ class OutputRegistry:
         self._metadata = {}
         self._dtypes = {}
 
+    @property
+    def names(self) -> Iterable[OutputName]:
+        return self._extractors.keys()
+
     def register(
         self,
         func: OutputExtractor | None = None,
@@ -193,7 +195,7 @@ class OutputRegistry:
         def _register(func: OutputExtractor) -> OutputExtractor:
             output_name = name if name is not None else func.__name__
 
-            if output_name in self._extractors:
+            if output_name in self.names:
                 raise ValueError(f"output '{output_name}' already registered")
 
             if depends is not None:
@@ -201,16 +203,14 @@ class OutputRegistry:
             else:
                 output_dependencies = tuple(inspect.signature(func).parameters)
 
-            missing = [
-                pred for pred in output_dependencies if pred not in self._extractors
-            ]
+            missing = [pred for pred in output_dependencies if pred not in self.names]
             if missing:
                 # TODO swap with custom exception
                 # TODO: maybe remove available outputs
                 raise RuntimeError(
                     f"unable to register output {output_name}"
                     f" - depends on unregistered  predecessors {missing}."
-                    f" Available: {list(self._extractors.keys())}"
+                    f" Available: {list(self.names)}"
                 )
 
             self._extractors[output_name] = (output_dependencies, func)
