@@ -13,6 +13,7 @@ from typing import Any, Callable, Iterable, Literal
 
 import numpy as np
 import xarray as xr
+from typing_extensions import Never
 
 import rtm_wrapper.util as rtm_util
 from rtm_wrapper.engines.base import EngineOutputs, OutputName, RTMEngine
@@ -99,6 +100,19 @@ class LocalMemoryExecutor(SweepExecutor, ABC):
         for output_name in engine.requested_outputs:
             output_type = engine.outputs._dtypes[output_name]
             output_metadata = engine.outputs._metadata[output_name]
+
+            if output_type == np.dtype(object):
+                raise RuntimeError(
+                    f"cannot sweep with output '{output_name}' of object type"
+                )
+
+            # TODO: tidy add mechanism to report dtypes for virtual outputs?
+            if output_type is Never:
+                raise RuntimeError(
+                    f"sweeping with virtual output ('{output_name}') not yet supported. "
+                    f"As a quick-fix, register an extracted output that mirrors it."
+                )
+
             data_vars[output_name] = (
                 # All output variables have the same shape as the input grid.
                 tuple(sweep_dims.keys()),
