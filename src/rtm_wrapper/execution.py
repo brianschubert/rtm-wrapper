@@ -135,25 +135,18 @@ class SerialExecutor(LocalMemoryExecutor):
         step_callback: Callable[[tuple[int, ...]], None] | None = None,
         **kwargs: Any,
     ) -> None:
-        # TODO update
-        raise NotImplementedError
+        assert self._results is not None  # for type checker
 
-        # assert self._results is not None  # for type checker
-        #
-        # if kwargs:
-        #     raise ValueError(f"unknown kwargs {kwargs}")
-        #
-        # with np.nditer(
-        #     sweep.sweep_spec.grid.data, flags=["multi_index", "refs_ok"]
-        # ) as it:
-        #     for inputs in it:
-        #         out = engine.run_simulation(inputs.item())  # type: ignore
-        #         for output_name in self._results.keys():
-        #             self._results.data_vars[output_name][it.multi_index] = getattr(
-        #                 out, output_name  # type: ignore
-        #             )
-        #         if step_callback is not None:
-        #             step_callback(it.multi_index)
+        if kwargs:
+            raise ValueError(f"unknown kwargs {kwargs}")
+
+        for idx in np.ndindex(sweep.sweep_shape):
+            inputs = sweep[idx]
+            out = engine.run_simulation(inputs)  # type: ignore
+            for output_name in self._results.keys():
+                self._results.data_vars[output_name][idx] = out[output_name]  # type: ignore
+            if step_callback is not None:
+                step_callback(idx)
 
 
 class ConcurrentExecutor(LocalMemoryExecutor):
@@ -218,7 +211,7 @@ class ConcurrentExecutor(LocalMemoryExecutor):
                 try:
                     out = future.result()
                     for output_name in self._results.keys():
-                        self._results.variables[output_name][idx] = out[output_name]
+                        self._results.variables[output_name][idx] = out[output_name]  # type: ignore
                 except Exception as ex:
                     error_input = sweep[idx]
                     logger.error(
