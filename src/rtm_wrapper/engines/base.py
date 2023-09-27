@@ -67,7 +67,7 @@ class RTMEngine(abc.ABC):
     @property
     def available_outputs(self) -> tuple[OutputName, ...]:
         return tuple(self.outputs._extractors.keys())
- 
+
     @property
     def requested_outputs(self) -> tuple[OutputName, ...]:
         return self._requested_outputs
@@ -103,7 +103,8 @@ class RTMEngine(abc.ABC):
                 extractor_args = [outputs[dep] for dep in dep_names]
             except KeyError as ex:
                 raise RuntimeError(
-                    f"output predecessor '{ex.args[0]}' not set - this is a bug"
+                    f"output predecessor '{ex.args[0]}' for '{output_name}' not set"
+                    f" - this is a bug. Extraction order was {self._extraction_order}"
                 ) from ex
 
             outputs[output_name] = extractor(*extractor_args)
@@ -254,9 +255,9 @@ class OutputRegistry:
             out = pending.pop()
             processed.add(out)
 
-            deps = self._extractors[out][0]
-            required_extractions.union(deps)
-            pending.union(frozenset(deps).difference(processed))
+            deps = frozenset(self._extractors[out][0])
+            required_extractions |= deps
+            pending |= deps - processed
 
         graph_order = graphlib.TopologicalSorter(
             {output_name: deps for output_name, (deps, _) in self._extractors.items()}
