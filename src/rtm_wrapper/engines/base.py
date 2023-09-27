@@ -65,6 +65,10 @@ class RTMEngine(abc.ABC):
         self.requested_outputs = tuple(outputs)
 
     @property
+    def available_outputs(self) -> tuple[OutputName, ...]:
+        return tuple(self.outputs._extractors.keys())
+ 
+    @property
     def requested_outputs(self) -> tuple[OutputName, ...]:
         return self._requested_outputs
 
