@@ -67,3 +67,8 @@ ignore_missing_imports = true
 [[tool.mypy.overrides]]
 module = "rtm_wrapper.*"
 warn_return_any = false
+
+# pytest config.
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
