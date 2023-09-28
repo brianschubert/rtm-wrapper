@@ -53,17 +53,26 @@ class LocalMemoryExecutor(SweepExecutor, ABC):
     def __init__(self) -> None:
         self._results = None
 
+    def steps_for(self, sweep: SweepSimulation) -> int:
+        """
+        Return a forecast for the number of times ``step_callback`` will be called if
+        the given simulation is pass to ``run``.
+        """
+        return sweep.sweep_size
+
     def run(
         self,
         sweep: SweepSimulation,
         engine: RTMEngine,
+        *,
+        step_callback: Callable[..., None] | None = None,
         **kwargs: Any,
     ) -> None:
         self._allocate_results_like(sweep.sweep_spec, engine)
         assert self._results is not None  # for type checker
 
         sim_start = datetime.datetime.now().astimezone().isoformat()
-        self._run(sweep, engine, **kwargs)
+        self._run(sweep, engine, step_callback=step_callback, **kwargs)
         sim_end = datetime.datetime.now().astimezone().isoformat()
 
         engine_type = type(engine)
@@ -83,7 +92,14 @@ class LocalMemoryExecutor(SweepExecutor, ABC):
         )
 
     @abc.abstractmethod
-    def _run(self, sweep: SweepSimulation, engine: RTMEngine, **kwargs: Any) -> None:
+    def _run(
+        self,
+        sweep: SweepSimulation,
+        engine: RTMEngine,
+        *,
+        step_callback: Callable[..., None] | None = None,
+        **kwargs: Any,
+    ) -> None:
         ...
 
     def collect_results(self) -> xr.Dataset:
