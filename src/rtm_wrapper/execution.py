@@ -3,6 +3,7 @@ from __future__ import annotations
 import abc
 import base64
 import concurrent.futures
+import contextlib
 import datetime
 import gzip
 import itertools
@@ -14,14 +15,15 @@ import pathlib
 import pickle
 import tempfile
 from abc import ABC
-from typing import Any, Callable, Iterable, Literal
+from collections.abc import Sequence
+from typing import Any, Callable, Literal
 
 import numpy as np
 import xarray as xr
 from typing_extensions import Never
 
 import rtm_wrapper.util as rtm_util
-from rtm_wrapper.engines.base import EngineOutputs, OutputName, RTMEngine
+from rtm_wrapper.engines.base import EngineOutputs, RTMEngine
 from rtm_wrapper.simulation import SweepSimulation
 
 
@@ -245,9 +247,9 @@ class ConcurrentExecutor(LocalMemoryExecutor):
                     step_callback(idx)
 
 
-class ParallelConcurrentExecutor(SweepExecutor):
+class ParallelConcurrentExecutor(LocalMemoryExecutor):
     """
-    Executor that runs multiple ``ConcurrentExecutor``s in spawned subprocess.
+    Executor that runs multiple ``ConcurrentExecutor``s in spawned subprocesses.
 
     This can improve performance over ``ConcurrentExecutor`` when simulation sweeps
     are Python bounded, which can happen when individual simulator runs are fast or
@@ -255,51 +257,81 @@ class ParallelConcurrentExecutor(SweepExecutor):
     """
 
     _split_dim: str | None = None
+    _split_sections: int | Sequence[int] | None = None
 
-    _result_files: list[pathlib.Path]
-
-    _max_managers: int
-    _max_workers: int
+    _max_managers: int | None
+    _max_workers: int | None
 
     def __init__(
         self,
         split_dim: str | None = None,
+        split_sections: int | Sequence[int] | None = None,
         max_managers: int | None = None,
         max_workers: int | None = None,
     ) -> None:
+        if self._split_sections is not None and self._split_dim is None:
+            raise ValueError("split_dim must be given when split_sections is passed")
+
         self._split_dim = split_dim
-        self._result_files = []
+        self._split_sections = split_sections
         self._max_managers = max_managers
         self._max_workers = max_workers
+        super().__init__()
 
-    def run(
+    def steps_for(self, sweep: SweepSimulation) -> int:
+        if self._split_sections is not None:
+            if isinstance(self._split_sections, int):
+                return self._split_sections
+            else:
+                return len(self._split_sections)
+
+        dims = sweep.dims
+        return (
+            dims[self._split_dim]
+            if self._split_dim is not None
+            else max(sweep.dims.values())
+        )
+
+    def _allocate_results_like(self, sweep_spec: xr.Dataset, engine: RTMEngine) -> None:
+        # Delay results allocation to the end of  _run.
+        self._results = xr.Dataset()
+
+    def _run(
         self,
         sweep: SweepSimulation,
         engine: RTMEngine,
         *,
-        work_directory: pathlib.Path | None = None,
-        step_callback: Callable[[str], None] | None = None,
+        work_directory: pathlib.Path | str | None = None,
+        step_callback: Callable[[pathlib.Path], None] | None = None,
         **kwargs: Any,
     ) -> None:
-        if self._split_dim is None:
-            self._split_dim = max(sweep.dims.items(), key=operator.itemgetter(1))[0]
+        if self._split_sections is not None:
+            sections = self._split_sections
+        else:
+            if self._split_dim is None:
+                self._split_dim, sections = max(
+                    sweep.dims.items(), key=operator.itemgetter(1)
+                )
+            else:
+                sections = sweep.dims[self._split_dim]
 
         # TODO consider using lazy splitting
-        split_sweeps = list(sweep.split(sweep.dims[self._split_dim], self._split_dim))
+        split_sweeps = list(sweep.split(sections, self._split_dim))
 
         if work_directory is not None:
-            self._run_sims(split_sweeps, engine, work_directory, step_callback)
+            dir_ctx = contextlib.nullcontext(work_directory)
         else:
-            with tempfile.TemporaryDirectory() as temp_dir:
-                work_directory = pathlib.Path(temp_dir)
-                self._run_sims(split_sweeps, engine, work_directory, step_callback)
+            dir_ctx = tempfile.TemporaryDirectory()  # type: ignore
+
+        with dir_ctx as work_dir:
+            self._run_sims(split_sweeps, engine, pathlib.Path(work_dir), step_callback)
 
     def _run_sims(
         self,
         sweeps: list[SweepSimulation],
         engine: RTMEngine,
         work_directory: pathlib.Path,
-        step_callback: Callable[[str], None] | None = None,
+        step_callback: Callable[[pathlib.Path], None] | None = None,
     ) -> None:
         file_prefix = datetime.datetime.now().astimezone().isoformat()
         ndigits = math.floor(math.log10(len(sweeps)) + 1)
@@ -315,7 +347,7 @@ class ParallelConcurrentExecutor(SweepExecutor):
             max_workers=self._max_managers,
             mp_context=context,
         ) as executor:
-            futures_to_file = {
+            futures_to_file: dict[concurrent.futures.Future[None], pathlib.Path] = {
                 executor.submit(
                     _parallel_sim_target,
                     swp,
@@ -325,13 +357,10 @@ class ParallelConcurrentExecutor(SweepExecutor):
                 ): save_file
                 for (swp, save_file) in zip(sweeps, file_gen)
             }
-            self._result_files = list(futures_to_file.values())
-            print("2")
 
             # TODO any handling?
             for future in concurrent.futures.as_completed(futures_to_file):
                 save_file = futures_to_file[future]
-                print(3)
                 try:
                     future.result()
                 except Exception:
@@ -339,26 +368,21 @@ class ParallelConcurrentExecutor(SweepExecutor):
                 if step_callback is not None:
                     step_callback(save_file)
 
-    def collect_results(self) -> xr.Dataset:
-        if not self._result_files:
-            raise RuntimeError("no results to load")
-
-        ds = [xr.load_dataset(file) for file in self._result_files]
-        print(ds)
-        # TODO assess performance vs xr.open_mfdataset
-        # TODO dataset attribtues
-        results = xr.combine_nested(
-            ds,
-            concat_dim=self._split_dim,
-            compat="equals",
-            join="exact",
-            combine_attrs="drop",
-        )
-        return results
+            ds = [xr.load_dataset(file) for file in futures_to_file.values()]
+            self._results = xr.combine_nested(
+                ds,
+                concat_dim=self._split_dim,
+                compat="equals",
+                join="exact",
+                combine_attrs="drop",
+            )
 
 
 def _parallel_sim_target(
-    sweep: SweepSimulation, engine: RTMEngine, save_file: pathlib.Path, max_workers: int
+    sweep: SweepSimulation,
+    engine: RTMEngine,
+    save_file: pathlib.Path,
+    max_workers: int | None,
 ) -> None:
     executor = ConcurrentExecutor(max_workers=max_workers)
     executor.run(sweep, engine)
