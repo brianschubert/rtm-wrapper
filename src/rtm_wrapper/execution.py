@@ -11,6 +11,7 @@ import logging
 import math
 import multiprocessing
 import operator
+import os
 import pathlib
 import pickle
 import tempfile
@@ -282,12 +283,7 @@ class ParallelConcurrentExecutor(LocalMemoryExecutor):
             else:
                 return len(self._split_sections)
 
-        dims = sweep.dims
-        return (
-            dims[self._split_dim]
-            if self._split_dim is not None
-            else max(sweep.dims.values())
-        )
+        return os.cpu_count()
 
     def _allocate_results_like(self, sweep_spec: xr.Dataset, engine: RTMEngine) -> None:
         # Delay results allocation to the end of  _run.
@@ -308,7 +304,7 @@ class ParallelConcurrentExecutor(LocalMemoryExecutor):
             dim = self._split_dim
 
         if self._split_sections is None:
-            sections = sweep.dims[dim]
+            sections = os.cpu_count()
         else:
             sections = self._split_sections
 
