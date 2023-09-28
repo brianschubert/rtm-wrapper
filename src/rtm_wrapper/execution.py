@@ -269,9 +269,6 @@ class ParallelConcurrentExecutor(LocalMemoryExecutor):
         max_managers: int | None = None,
         max_workers: int | None = None,
     ) -> None:
-        if self._split_sections is not None and self._split_dim is None:
-            raise ValueError("split_dim must be given when split_sections is passed")
-
         self._split_dim = split_dim
         self._split_sections = split_sections
         self._max_managers = max_managers
@@ -305,18 +302,18 @@ class ParallelConcurrentExecutor(LocalMemoryExecutor):
         step_callback: Callable[[pathlib.Path], None] | None = None,
         **kwargs: Any,
     ) -> None:
-        if self._split_sections is not None:
-            sections = self._split_sections
+        if self._split_dim is None:
+            dim = max(sweep.dims.items(), key=operator.itemgetter(1))[0]
         else:
-            if self._split_dim is None:
-                self._split_dim, sections = max(
-                    sweep.dims.items(), key=operator.itemgetter(1)
-                )
-            else:
-                sections = sweep.dims[self._split_dim]
+            dim = self._split_dim
+
+        if self._split_sections is None:
+            sections = sweep.dims[dim]
+        else:
+            sections = self._split_sections
 
         # TODO consider using lazy splitting
-        split_sweeps = list(sweep.split(sections, self._split_dim))
+        split_sweeps = list(sweep.split(sections, dim))
 
         if work_directory is not None:
             dir_ctx = contextlib.nullcontext(work_directory)
@@ -324,12 +321,15 @@ class ParallelConcurrentExecutor(LocalMemoryExecutor):
             dir_ctx = tempfile.TemporaryDirectory()  # type: ignore
 
         with dir_ctx as work_dir:
-            self._run_sims(split_sweeps, engine, pathlib.Path(work_dir), step_callback)
+            self._run_sims(
+                split_sweeps, engine, dim, pathlib.Path(work_dir), step_callback
+            )
 
     def _run_sims(
         self,
         sweeps: list[SweepSimulation],
         engine: RTMEngine,
+        concat_dim: str,
         work_directory: pathlib.Path,
         step_callback: Callable[[pathlib.Path], None] | None = None,
     ) -> None:
@@ -371,7 +371,7 @@ class ParallelConcurrentExecutor(LocalMemoryExecutor):
             ds = [xr.load_dataset(file) for file in futures_to_file.values()]
             self._results = xr.combine_nested(
                 ds,
-                concat_dim=self._split_dim,
+                concat_dim=concat_dim,
                 compat="equals",
                 join="exact",
                 combine_attrs="drop",
