@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "rtm-wrapper"
-version = "0.1.0-dev"
+version = "0.2.0-dev"
 description = ""
 authors = ["Brian Schubert <schubert.b@northeastern.edu>"]
 readme = "README.md"
@@ -13,7 +13,7 @@ packages = [
 python = "^3.9"
 py6s = "^1.9.2"
 nptyping = "^2.5.0"
-typing-extensions = "^4.7.1"
+typing-extensions = "^4.5.0"
 xarray = "^2023.7.0"
 6s-bin = { git = "https://github.com/brianschubert/6s-bin.git", optional = true }
 splib07-loader = { git = "https://github.com/brianschubert/splib07-loader.git", optional = true }
@@ -71,3 +71,8 @@ ignore_missing_imports = true
 [[tool.mypy.overrides]]
 module = "rtm_wrapper.*"
 warn_return_any = false
+
+# pytest config.
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+

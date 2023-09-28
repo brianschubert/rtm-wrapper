@@ -4,25 +4,20 @@ Mock RTM engines. Useful for development.
 
 from __future__ import annotations
 
-import dataclasses
 import logging
-from typing import Final
 
-from rtm_wrapper.engines.base import RTMEngine
-from rtm_wrapper.simulation import Inputs, Outputs
-
-_NAN_OUTPUTS: Final = Outputs(
-    **{f.name: float("nan") for f in dataclasses.fields(Outputs)}
-)
+from rtm_wrapper.engines.base import EngineOutputs, RTMEngine
+from rtm_wrapper.simulation import Inputs
 
 
+# TODO: update to new ouptut api
 class DummyEngine(RTMEngine):
-    def run_simulation(self, inputs: Inputs) -> Outputs:
+    def run_simulation(self, inputs: Inputs) -> EngineOutputs:
         logger = logging.getLogger(__name__)
         logger.info("%r", inputs)
-        return dataclasses.replace(_NAN_OUTPUTS)
+        raise NotImplementedError
 
 
 class NotImplementedEngine(RTMEngine):
-    def run_simulation(self, inputs: Inputs) -> Outputs:
+    def run_simulation(self, inputs: Inputs) -> EngineOutputs:
         raise NotImplementedError

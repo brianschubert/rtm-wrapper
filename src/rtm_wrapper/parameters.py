@@ -4,13 +4,41 @@ Model agnostic descriptions of simulation input parameters.
 
 from __future__ import annotations
 
+import abc
+import contextlib
 import copy
-import typing
-from dataclasses import dataclass
-from typing import Annotated, Any, Literal, TypedDict
+import math
+import re
+from collections.abc import Mapping
+from typing import (
+    Any,
+    ClassVar,
+    Generator,
+    Generic,
+    TypedDict,
+    TypeVar,
+    Union,
+    overload,
+)
 
 import numpy as np
-from typing_extensions import NotRequired
+from typing_extensions import Literal, NotRequired, TypeAlias
+
+_VALIDATE_FIELDS: bool = True
+
+ParameterPath: TypeAlias = Union[str, tuple[str, ...]]
+
+T = TypeVar("T")
+F = TypeVar("F")
+P = TypeVar("P", bound="Parameter")
+
+
+class ParameterError(Exception):
+    """Raised on invalid parameter access."""
+
+
+class UnsetParameterError(ParameterError):
+    """Raised on attempt to access an unset parameter."""
 
 
 class MetadataDict(TypedDict):
@@ -18,9 +46,204 @@ class MetadataDict(TypedDict):
     unit: NotRequired[str]
 
 
-class Parameter:
+class Field(Generic[F]):
+    """
+    Base class for field descriptors.
+
+    Fields are leaves in the input parameter tree that are responsible for storing
+    fixed input parameter values.
+
+    Each instance of a field may optionally specify a ``title`` and ``unit``, which
+    help document  the meaning of the field and can be used in human-readable
+    representations.
+    """
+
+    public_name: str
+    """Name of this descriptor in the host class."""
+
+    private_name: str
+    """Attribute used to store this field's value in the host instance."""
+
+    title: str | None
+    """Human readable title of this field."""
+
+    unit: str | None
+    """Unit that this field is measured in."""
+
+    dtype: ClassVar[np.dtype]
+    """Numpy dtype used to store sweeps of this field."""
+
+    def __init__(self, title: str | None = None, unit: str | None = None):
+        self.title = title
+        self.unit = unit
+
+    def __set_name__(self, owner: Any, name: str) -> None:
+        self.public_name = name
+        self.private_name = f"_{name}"
+
+    def __get__(self, instance: T, owner: type[T] | None) -> F:
+        try:
+            value = getattr(instance, self.private_name)
+        except AttributeError:
+            raise UnsetParameterError(
+                f"attempted to access unset parameter"
+                f" {type(instance).__name__}.{self.public_name}"
+            )
+
+        return value
+
+    def __set__(self, instance: Any, value: F) -> None:
+        if _VALIDATE_FIELDS:
+            self.validate(instance, value)
+        setattr(instance, self.private_name, value)
+
+    def validate(self, instance: Any, value: F) -> None:
+        pass  # TODO settle on validation framework
+
+    def metadata(self) -> MetadataDict:
+        metadata: MetadataDict = {}
+        if self.title is not None:
+            metadata["title"] = self.title
+        if self.unit is not None:
+            metadata["unit"] = self.unit
+        return metadata
+
+
+class ParameterField(Field[P]):
+    """
+    Field containing a swappable parameter.
+
+    Creates a branch in the parameter tree.
+    """
+
+    _parameter_type: type[P]
+
+    def __init__(self, parameter_type: type[P], title: str | None = None) -> None:
+        super().__init__(title=title, unit=None)
+        self._parameter_type = parameter_type
+
+    def validate(self, instance: Any, value: F) -> None:
+        if not isinstance(value, self._parameter_type):
+            raise ParameterError(
+                f"value for {type(instance).__name__}.{self.public_name}"
+                f" must be subclass of {self._parameter_type.__name__},"
+                f" got type {type(value).__name__}"
+            )
+
+
+class StrField(Field[str]):
+    """Field taking on a string value."""
+
+    dtype = np.dtype(str)
+
+
+class FloatField(Field[float]):
+    """Field taking on a float value."""
+
+    dtype = np.dtype(float)
+
+
+class IntField(Field[int]):
+    """Field taking on an integer value."""
+
+    dtype = np.dtype(int)
+
+
+class FloatArrayField(Field[np.ndarray]):
+    """Field taking on a float value."""
+
+    # TODO array validation
+    dtype = np.dtype(float)
+
+
+class ParameterMeta(type):
+    """Metaclass for parameters."""
+
+    _fields: frozenset[str]
+
+    def __new__(
+        cls: type[ParameterMeta],
+        name: str,
+        bases: tuple[type, ...],
+        namespace: dict[str, Any],
+        /,
+        **kwargs: Any,
+    ) -> type:
+        cls = super().__new__(cls, name, bases, namespace, **kwargs)
+
+        fields = set()
+
+        # TODO check for conflicts among base classes and current class?
+        for base in bases:
+            if not issubclass(type(base), ParameterMeta):
+                continue
+            fields.update(base._fields)  # type: ignore
+
+        fields.update(
+            name for name, value in namespace.items() if isinstance(value, Field)
+        )
+
+        cls._fields = frozenset(fields)
+
+        return cls
+
+
+class Parameter(metaclass=ParameterMeta):
+    """
+    Base class for input parameters.
+
+    Parameter subclasses should represent some definite physical representation
+    of a model parameter that RTM engines can optionally implement.
+    """
+
+    _fields: ClassVar[frozenset[str]]
+
+    def __init__(self, **kwargs: Any) -> None:
+        for name, value in kwargs.items():
+            if name in self._fields:
+                setattr(self, name, value)
+            else:
+                raise ParameterError(
+                    f"unknown field '{name}' - must be one of {list(self._fields)}"
+                )
+
+    def __repr__(self) -> str:
+        field_parts = []
+        for name in sorted(self._fields):
+            try:
+                field_parts.append(f"{name}={getattr(self, name)!r}")
+            except UnsetParameterError:
+                field_parts.append(f"{name}=<UNSET>")
+
+        return f"{type(self).__name__}({', '.join(field_parts)})"
+
+    def replace(self, *args: Any, **kwargs: Any) -> Parameter:
+        duplicate = copy.deepcopy(self)
+        duplicate.set(*args, **kwargs)
+        return duplicate
+
+    @overload
+    def set(self, param: ParameterPath, value: Any, /) -> None:
+        ...
+
+    @overload
+    def set(self, updates: Mapping[str, Any], /) -> None:
+        ...
+
+    @overload
     def set(
-        self, param: str | None = None, value: Any | None = None, /, **kwargs: Any
+        self,
+        /,
+        **kwargs: Any,
+    ) -> None:
+        ...
+
+    def set(
+        self,
+        param: Mapping[str, Any] | ParameterPath | None = None,
+        value: Any | None = None,
+        /,
+        **kwargs: Any,
     ) -> None:
         if kwargs:
             if param is not None:
@@ -32,123 +255,199 @@ class Parameter:
             return
 
         if param is None:
-            raise ValueError(
-                "parameter name must be specified when no kwargs are given"
+            # No positional arguments were given.
+            # Called no with arguments - do nothing.
+            return
+
+        if isinstance(param, Mapping):
+            for param_path, param_arg in param.items():
+                self.set(param_path, param_arg)
+            return
+
+        if value is None:
+            raise ParameterError(
+                "value must be specified when first argument is not a mapping"
             )
-
-        current_attr, _sep, sub_param_path = param.partition("__")
-
-        if sub_param_path:
-            sub_param = getattr(self, current_attr)
-            sub_param.set(sub_param_path, value)
-        else:
-            current_value = getattr(self, current_attr)
-            old_is_param = isinstance(current_value, Parameter)
-            new_is_param = isinstance(value, Parameter)
-            if old_is_param or new_is_param:
-                if not old_is_param or not new_is_param:
-                    raise ValueError(
-                        f"attempt to change parameter status - old is {type(current_value).__name__}, new is {type(value).__name__}"
-                    )
-            setattr(self, current_attr, value)
-
-    def get_metadata(self, param_path: str) -> MetadataDict:
-        current_attr, _sep, sub_param_path = param_path.partition("__")
-        if sub_param_path:
-            try:
-                sub_param: Parameter = getattr(self, current_attr)
-            except AttributeError:
-                raise AttributeError(
-                    f"unable to resolve sub-parameter '{current_attr}' on {self.__class__.__name__}"
-                )
-            return sub_param.get_metadata(sub_param_path)
 
         try:
-            all_hints = typing.get_type_hints(self.__class__, include_extras=True)
-            attr_hints = all_hints[current_attr]
-        except KeyError:
-            raise AttributeError(
-                f"unable to resolve terminal parameter '{current_attr}' on {self.__class__.__name__}"
-            )
-        if typing.get_origin(attr_hints) is Annotated:
-            metadata: MetadataDict = typing.get_args(attr_hints)[1]
-            return metadata
+            self._set(_parse_parameter_path(param), value)
+        except Exception as ex:
+            raise ParameterError(
+                f"failed to set field '{param}' to '{value}': {ex}"
+            ) from ex
+
+    def _set(self, path: tuple[str, ...], value: Any) -> None:
+        curr_field, *sub_path = path
+        if sub_path:
+            try:
+                sub_param = getattr(self, curr_field)
+            except AttributeError:
+                raise ParameterError(f"unknown parameter '{curr_field}")
+            sub_param._set(sub_path, value)
         else:
-            return {}
+            # Not: can't use hasattr check, since it would invoke __get__ on <UNSET>
+            # fields.
+            if curr_field not in vars(self.__class__):
+                raise ParameterError(f"unknown field '{curr_field}'")
+            setattr(self, curr_field, value)
 
-    def replace(self, **kwargs: Any) -> Parameter:
-        duplicate = copy.deepcopy(self)
-        duplicate.set(**kwargs)
-        return duplicate
+    @overload
+    def get_fields(self, style: Literal[".", "__"] = ...) -> list[str]:
+        ...
+
+    @overload
+    def get_fields(self, style: Literal["()"]) -> list[tuple[str, ...]]:
+        ...
+
+    def get_fields(
+        self, style: Literal[".", "__", "()"] = "."
+    ) -> list[str] | list[tuple[str, ...]]:
+        """Return list containing the paths to all this parameter's terminal fields."""
+        if style not in (".", "__", "()"):
+            raise ValueError(f"unknown parameter path style '{style}'")
+
+        paths = []
+        for field_name in self._fields:
+            field = vars(self.__class__)[field_name]
+            if isinstance(field, ParameterField):
+                for p in getattr(self, field_name).get_fields("()"):
+                    paths.append((field_name,) + p)
+            else:
+                paths.append((field_name,))
+
+        if style != "()":
+            paths = [style.join(p) for p in paths]
+        return paths
+
+    def get_metadata(self, param: ParameterPath) -> MetadataDict:
+        return self._get_metadata(_parse_parameter_path(param))
+
+    def _get_metadata(self, path: tuple[str, ...]) -> MetadataDict:
+        curr_field, *sub_path = path
+
+        if sub_path:
+            try:
+                sub_param = getattr(self, curr_field)
+            except AttributeError:
+                raise ParameterError(f"unknown parameter '{curr_field}")
+            return sub_param._get_metadata(sub_path)
+        else:
+            try:
+                return vars(self.__class__)[curr_field].metadata()
+            except KeyError:
+                raise ParameterError(f"unknown field '{curr_field}'")
 
 
-@dataclass
+class AbstractParameterMeta(ParameterMeta, abc.ABCMeta):
+    """Metaclass for abstract parameters."""
+
+
+class AbstractParameter(Parameter, metaclass=AbstractParameterMeta):
+    """
+    Base class for abstract input parameters.
+
+    Like ``Parameter``, but supports ``abc.ABC`` astract behavior.
+    """
+
+
+def _parse_parameter_path(param_path: str | tuple[str, ...]) -> tuple[str, ...]:
+    if isinstance(param_path, tuple):
+        return param_path
+
+    return tuple(re.split(r"\.|__", param_path))
+
+
 class AltitudePredefined(Parameter):
-    name: Annotated[Literal["sealevel", "satellite"], MetadataDict(title="Altitude")]
+    name = StrField(title="Altitude")
 
 
-@dataclass
 class AltitudeKilometers(Parameter):
-    value: Annotated[float, MetadataDict(title="Altitude")]
+    value = FloatField(title="Altitude", unit="km")
 
 
-@dataclass
 class AtmospherePredefined(Parameter):
-    name: Annotated[
-        Literal[
-            "NoGaseousAbsorption",
-            "Tropical",
-            "MidlatitudeSummer",
-            "MidlatitudeWinter",
-            "SubarcticSummer",
-            "SubarcticWinter",
-        ],
-        MetadataDict(title="Atmosphere Profile"),
-    ]
+    name = StrField(title="Atmosphere Profile")
 
 
-@dataclass
 class AtmosphereWaterOzone(Parameter):
-    water: Annotated[float, MetadataDict(title="Water Column", unit="g/cm^2")]
-    ozone: Annotated[float, MetadataDict(title="Ozone Column", unit="cm-atm")]
+    water = FloatField(title="Water Column", unit="g/cm^2")
+    ozone = FloatField(title="Ozone Column", unit="cm-atm")
 
 
-@dataclass
-class AtmosphereAotLayers(AtmospherePredefined):
-    layers: np.ndarray
-
-
-@dataclass
 class AerosolProfilePredefined(Parameter):
-    name: Annotated[
-        Literal["Maritime", "Urban", "Continental"],
-        MetadataDict(title="Aerosol Profile"),
-    ]
+    profile = StrField(title="Aerosol Profile")
 
 
-@dataclass
+class AerosolAOTSingleLayer(AerosolProfilePredefined):
+    height = FloatField(title="Height", unit="km")
+    aot = FloatField(title="AOT", unit="1")
+
+
+class AerosolAOTLayers(AerosolProfilePredefined):
+    layers = FloatArrayField()
+
+
 class GroundReflectanceHomogenousUniformLambertian(Parameter):
-    reflectance: Annotated[float, MetadataDict(title="Reflectance")]
+    reflectance = FloatField(title="Reflectance", unit="1")
 
 
-@dataclass
 class GroundReflectanceHomogenousLambertian(Parameter):
-    wavelengths: np.ndarray
-    spectrum: np.ndarray
+    wavelengths = FloatArrayField("Wavelength", unit="micrometers")
+    spectrum = FloatArrayField("Reflectance", unit="1")
 
 
-@dataclass
-class GroundReflectanceHeterogeneousUniformLambertian(Parameter):
-    target: float
-    background: float
+# @dataclass
+# class GroundReflectanceHeterogeneousUniformLambertian(Parameter):
+#     target: float
+#     background: float
 
 
-@dataclass
 class GroundReflectanceHeterogeneousLambertian(Parameter):
-    target: GroundReflectanceHomogenousLambertian
-    background: GroundReflectanceHomogenousLambertian
+    target = ParameterField(GroundReflectanceHomogenousLambertian)
+    background = ParameterField(GroundReflectanceHomogenousLambertian)
 
 
-@dataclass
 class WavelengthFixed(Parameter):
-    value: Annotated[float, MetadataDict(title="Wavelength", unit="micrometers")]
+    value = FloatField(title="Wavelength", unit="micrometers")
+
+
+class AngleParameter(AbstractParameter):
+    @abc.abstractmethod
+    def as_degrees(self) -> float:
+        ...
+
+
+class AngleDegreesParameter(AngleParameter):
+    degrees = FloatField(title="Angle", unit="degrees")
+
+    def as_degrees(self) -> float:
+        return self.degrees
+
+
+class AngleCosineParameter(AngleParameter):
+    cosine = FloatField(title="Angle Cosine", unit="1")
+
+    def as_degrees(self) -> float:
+        m = math  # Save a LOAD_GLOBAL. Probably a flagrantly premmature optiziataion
+        return m.degrees(m.acos(self.cosine))
+
+
+class GeometryAngleDate(Parameter):
+    solar_zenith = ParameterField(AngleParameter, title="Solar Zenith")
+    solar_azimuth = ParameterField(AngleParameter, title="Solar Azimuth")
+    view_zenith = ParameterField(AngleParameter, title="View Zenith")
+    view_azimuth = ParameterField(AngleParameter, title="View Azimuth")
+    day = IntField(title="Day")
+    month = IntField(title="Month")
+
+
+@contextlib.contextmanager
+def validate_fields(flag: bool) -> Generator[None, None, None]:
+    """Context manager for temporary enabling or disabling field validation."""
+    global _VALIDATE_FIELDS
+    prior = _VALIDATE_FIELDS
+    try:
+        _VALIDATE_FIELDS = flag
+        yield
+    finally:
+        _VALIDATE_FIELDS = prior

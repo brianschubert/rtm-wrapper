@@ -2,7 +2,10 @@
 
 [![Code style: black](https://img.shields.io/badge/code%20style-black-black.svg)](https://github.com/psf/black)
 
-Common wrapper interface for [6S](https://salsa.umd.edu/6spage.html) and (eventually) [MODTRAN](http://modtran.spectral.com/).
+Common wrapper interface for various Radiative Transfer Models (RTMs).
+
+Currently supports [6S](https://salsa.umd.edu/6spage.html).
+
 
 ## Install
 
@@ -25,8 +28,3 @@ $ pip install --no-deps .
 ```
 $ pytest
 ```
-
-## Misc References
-
-* [Py6S by Robin Wilson](https://www.py6s.rtwilson.com/index.html)
-* [6S | salsa.umd.edu](https://salsa.umd.edu/6spage.html)

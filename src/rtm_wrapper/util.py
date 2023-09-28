@@ -7,10 +7,28 @@ import importlib.metadata
 import logging.config
 import platform
 import subprocess
-from typing import Callable, Hashable, Iterable, TypeVar
+from typing import Any, Callable, Hashable, Iterable, TypeVar
+
+from typing_extensions import Never
 
 _T = TypeVar("_T")
 _H = TypeVar("_H", bound=Hashable)
+
+
+class TrapCalledError(RuntimeError):
+    """Raised when a trap callable is invoked."""
+
+    message: str
+    args: tuple[Any, ...]
+    kwargs: dict[str, Any]
+
+    def __init__(self, message, args: tuple[Any, ...], kwargs: dict[str, Any]) -> None:
+        self.message = message
+        self.args = args
+        self.kwargs = kwargs
+
+    def __str__(self):
+        return f"Trap called: {self.message}."
 
 
 def setup_debug_root_logging(level: int = logging.NOTSET) -> None:
@@ -94,3 +112,12 @@ def first_or(iterable: Iterable[_T], default: _T | None = None) -> _T | None:
         return next(iter(iterable))
     except StopIteration:
         return default
+
+
+def trap(message: str) -> Callable[..., Never]:
+    """Return a trap callable that raises when called."""
+
+    def _raise(*args: Any, **kwargs: Any) -> Never:
+        raise TrapCalledError(message, args, kwargs)
+
+    return _raise
