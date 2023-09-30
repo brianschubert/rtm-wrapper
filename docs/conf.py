@@ -18,7 +18,8 @@ release = rtm_wrapper.__version__
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
 
-extensions = ["sphinx_rtd_theme"]
+extensions = ["autoapi.extension"]
+autoapi_dirs = ["../src/rtm_wrapper/"]
 
 templates_path = ["_templates"]
 exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
