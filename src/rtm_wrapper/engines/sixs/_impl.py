@@ -1,231 +1,16 @@
 from __future__ import annotations
 
-import copy
 import math
 import operator
 import typing
-from collections.abc import Iterable
-from typing import Annotated, Any, Callable, ClassVar, Literal, TypedDict
+from typing import Annotated, Any, Callable
 
 import numpy as np
 import Py6S
-import Py6S.outputs as sixs_outputs
-from typing_extensions import TypeAlias
 
-import rtm_wrapper.parameters as rtm_param
-from rtm_wrapper.engines.base import (
-    EngineOutputs,
-    OutputName,
-    ParameterRegistry,
-    RTMEngine,
-)
-from rtm_wrapper.parameters import MetadataDict
-from rtm_wrapper.simulation import Inputs
-
-_TransmittanceName: TypeAlias = Literal[
-    "aerosol_scattering",
-    "ch4",
-    "co",
-    "co2",
-    "global_gas",
-    "no2",
-    "oxygen",
-    "ozone",
-    "rayleigh_scattering",
-    "total_scattering",
-    "water",
-]
-_RatName: TypeAlias = Literal[
-    "direction_of_plane_polarization",
-    "optical_depth_plane",
-    "optical_depth_total",
-    "phase_function_I",
-    "phase_function_Q",
-    "phase_function_U",
-    "polarized_reflectance",
-    "primary_degree_of_polarization",
-    "reflectance_I",
-    "reflectance_Q",
-    "reflectance_U",
-    "single_scattering_albedo",
-    "spherical_albedo",
-]
-_TransmittanceDict: TypeAlias = dict[_TransmittanceName, sixs_outputs.Transmittance]
-_RatDict: TypeAlias = dict[_RatName, sixs_outputs.RayleighAerosolTotal]
-
-
-class _OutputDict(TypedDict):
-    version: str
-    month: int
-    day: int
-    solar_z: int
-    solar_a: int
-    view_z: int
-    view_a: int
-    scattering_angle: float
-    azimuthal_angle_difference: float
-    visibility: float
-    aot550: float
-    ground_pressure: float
-    ground_altitude: float
-    apparent_reflectance: float
-    apparent_radiance: Annotated[
-        float, MetadataDict(title="Apparent Radiance", unit="W/sr-m^2")
-    ]
-    total_gaseous_transmittance: float
-    wv_above_aerosol: float
-    wv_mixed_with_aerosol: float
-    wv_under_aerosol: float
-    apparent_polarized_reflectance: float
-    apparent_polarized_radiance: float
-    direction_of_plane_of_polarization: float
-    total_polarization_ratio: float
-    percent_direct_solar_irradiance: float
-    percent_diffuse_solar_irradiance: float
-    percent_environmental_irradiance: float
-    atmospheric_intrinsic_reflectance: float
-    background_reflectance: float
-    pixel_reflectance: float
-    direct_solar_irradiance: float
-    diffuse_solar_irradiance: float
-    environmental_irradiance: float
-    atmospheric_intrinsic_radiance: float
-    background_radiance: float
-    pixel_radiance: float
-    solar_spectrum: float
-
-
-class PySixSEngine(RTMEngine):
-    params: ClassVar[ParameterRegistry[[Py6S.SixS]]]
-
-    virtual_outputs: ClassVar = ("py6s_values", "py6s_trans", "py6s_rat")
-
-    default_outputs: ClassVar = (
-        "apparent_radiance",
-        "transmittance_direct_down",
-        "transmittance_direct_up",
-        "transmittance_diffuse_down",
-        "transmittance_diffuse_up",
-        "transmittance_scattering_down",
-        "transmittance_scattering_up",
-        "total_transmission",
-        "spherical_albedo",
-    )
-
-    _base_wrapper: Py6S.SixS
-
-    def __init__(
-        self,
-        wrapper: Py6S.SixS | None = None,
-        *,
-        outputs: Iterable[OutputName] | None = None,
-    ) -> None:
-        if wrapper is None:
-            wrapper = make_sixs_wrapper()
-        if wrapper.sixs_path is None:
-            raise ValueError("misconfigured wrapper - sixs_path not defined")
-        self._base_wrapper = wrapper
-
-        super().__init__(outputs=outputs)
-
-    def run_simulation(self, inputs: Inputs) -> EngineOutputs:
-        # Note: this implementation avoids mutating any instance state so that it can
-        # be safely run from multiple threads on the same object.
-
-        wrapper = copy.deepcopy(self._base_wrapper)
-        self.params.process(inputs, wrapper)
-
-        wrapper.run()
-        sixs_outputs = wrapper.outputs
-
-        outputs: EngineOutputs = {
-            "py6s_values": sixs_outputs.values,
-            "py6s_trans": sixs_outputs.trans,
-            "py6s_rat": sixs_outputs.rat,
-        }
-        self._extract_outputs(outputs)
-        return outputs
-
-        # # Extract select outputs.
-        # cos_zenith_solar = math.cos(math.radians(outputs.values["solar_z"]))
-        # cos_zenith_view = math.cos(math.radians(outputs.values["view_z"]))
-        # m_optical_depth_total = -outputs.rat["optical_depth_total"].total
-        # total_scattering = outputs.trans["total_scattering"]
-        # t_scat_d, t_scat_u = total_scattering.downward, total_scattering.upward
-        #
-        # # Derive transmittances
-        # t_dir_d = math.exp(m_optical_depth_total / cos_zenith_solar)
-        # t_dir_u = math.exp(m_optical_depth_total / cos_zenith_view)
-        # t_diff_d = t_scat_d - t_dir_d
-        # t_diff_u = t_scat_u - t_dir_u
-        # t_gas = outputs.trans["global_gas"].total
-        #
-        # total_transmission = (
-        #     t_dir_d * t_dir_u
-        #     + t_diff_d * t_dir_u
-        #     + t_dir_d * t_diff_u
-        #     + t_diff_d * t_diff_u
-        # ) * t_gas
-        #
-        # return EngineOutputs(
-        #     apparent_radiance=outputs.values["apparent_radiance"],
-        #     transmittance_scattering_down=t_scat_d,
-        #     transmittance_scattering_up=t_scat_u,
-        #     transmittance_direct_down=t_dir_d,
-        #     transmittance_direct_up=t_dir_u,
-        #     transmittance_diffuse_down=t_diff_d,
-        #     transmittance_diffuse_up=t_diff_u,
-        #     transmittance_total_gas=t_gas,
-        #     total_transmission=total_transmission,
-        #     spherical_albedo=outputs.rat["spherical_albedo"].total,
-        #     single_scattering_albedo=outputs.rat["single_scattering_albedo"].total,
-        #     solar_spectrum=outputs.values["solar_spectrum"],
-        #     direct_solar_irradiance=outputs.values["direct_solar_irradiance"],
-        #     diffuse_solar_irradiance=outputs.values["diffuse_solar_irradiance"],
-        # )
-
-
-def pysixs_default_inputs() -> Inputs:
-    """
-    Return input parameters that replicate Py6S's defaults.
-    """
-    return Inputs(
-        altitude_sensor=rtm_param.AltitudePredefined(name="sealevel"),
-        altitude_target=rtm_param.AltitudePredefined(name="sealevel"),
-        atmosphere=rtm_param.AtmospherePredefined(name="MidlatitudeSummer"),
-        aerosol_profile=rtm_param.AerosolProfilePredefined(profile="Maritime"),
-        ground=rtm_param.GroundReflectanceHomogenousUniformLambertian(reflectance=0.3),
-        geometry=rtm_param.GeometryAngleDate(
-            solar_zenith=rtm_param.AngleDegreesParameter(degrees=32),
-            solar_azimuth=rtm_param.AngleDegreesParameter(degrees=264),
-            view_zenith=rtm_param.AngleDegreesParameter(degrees=23),
-            view_azimuth=rtm_param.AngleDegreesParameter(degrees=190),
-            day=14,
-            month=7,
-        ),
-        wavelength=rtm_param.WavelengthFixed(value=0.5),
-    )
-
-
-def make_sixs_wrapper() -> Py6S.SixS:
-    try:
-        import sixs_bin
-
-        return sixs_bin.make_wrapper()
-    except ImportError:
-        # [6s] extra not installed.
-        pass
-
-    # Let Py6s try finding 6S on PATH.
-    s = Py6S.SixS()
-
-    if s.sixs_path is None:
-        raise RuntimeError(
-            f"No 6S binary could be found. Make sure 6S is installed and on your PATH. "
-            f"Tip: Install {__package__.split('.')[0]} with the [6s] "
-            f"feature enabled to compile and install a local 6S binary."
-        )
-    return s
+from rtm_wrapper import parameters as rtm_param
+from rtm_wrapper.engines.sixs import PySixSEngine
+from rtm_wrapper.engines.sixs._py6s import _OutputDict, _RatName, _TransmittanceName
 
 
 def _item_attr_getter(item: Any, attr: str) -> Callable[[Any], Any]:
@@ -288,6 +73,8 @@ def _register_py6s_outputs() -> None:
             )
 
 
+# Immediately register Py6S outputs so that they can be used in the general output
+# registrations below.
 _register_py6s_outputs()
 
 #
@@ -379,7 +166,6 @@ def spherical_albedo(py6s_spherical_albedo_total: float) -> float:
 #
 # Parameter handlers.
 #
-
 
 # TODO validation and error checking.
 

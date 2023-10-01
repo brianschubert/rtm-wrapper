@@ -1,3 +1,6 @@
+"""
+RTM engine definition.
+"""
 from __future__ import annotations
 
 import abc
@@ -90,7 +93,11 @@ class RTMEngine(abc.ABC):
 
     @abc.abstractmethod
     def run_simulation(self, inputs: Inputs) -> EngineOutputs:
-        ...
+        """
+        Run this RTM module using the given inputs.
+
+        :param inputs: Input parameter tree.
+        """
 
     def _extract_outputs(self, outputs: EngineOutputs) -> None:
         # TODO: verify that virtuals have been set?
