@@ -50,5 +50,8 @@ autoapi_python_class_content = "both"
 # Don't use fully qualified names when documenting module members.
 add_module_names = False
 
+# Manually add generated documentation to TOC.
+autoapi_add_toctree_entry = False
+
 # sphinx.ext.viewcode configuration.
 # viewcode_line_numbers = True
