@@ -161,8 +161,8 @@ class SweepSimulation:
         self.base = base
 
         # TODO more robust input coordinate detection
-        self._input_coords = frozenset(  # type: ignore
-            coord
+        self._input_coords = frozenset(
+            typing.cast(str, coord)
             for coord in self.sweep_spec.coords.keys()
             if any(coord.startswith(top_name) for top_name in INPUT_TOP_NAMES)  # type: ignore
         )
@@ -188,7 +188,7 @@ class SweepSimulation:
         #         }
         #         x[...] = base.replace(overrides)  # type: ignore
 
-    def __getitem__(self, item: tuple[int, ...]) -> Inputs | np.ndarray:
+    def __getitem__(self, item: tuple[int, ...]) -> Inputs | np.ndarray[Any, Any]:
         overrides = {
             k: v.item() if v.size == 1 else v.squeeze()
             for k, v in self.sweep_spec.isel(

@@ -94,10 +94,14 @@ class GroundReflectanceHomogenousLambertian(Parameter):
 class GroundReflectanceHeterogeneousLambertian(Parameter):
     """Heterogeneous lambertian ground reflectance."""
 
-    target: ParameterField = ParameterField(GroundReflectanceHomogenousLambertian)
+    target: ParameterField[GroundReflectanceHomogenousLambertian] = ParameterField(
+        GroundReflectanceHomogenousLambertian
+    )
     """Target spectrum."""
 
-    background: ParameterField = ParameterField(GroundReflectanceHomogenousLambertian)
+    background: ParameterField[GroundReflectanceHomogenousLambertian] = ParameterField(
+        GroundReflectanceHomogenousLambertian
+    )
     """Background spectrum."""
 
 
@@ -141,18 +145,24 @@ class AngleCosineParameter(AngleParameter):
 class GeometryAngleDate(Parameter):
     """Geometry description."""
 
-    solar_zenith: ParameterField = ParameterField(AngleParameter, title="Solar Zenith")
+    solar_zenith: ParameterField[AngleParameter] = ParameterField(
+        AngleParameter, title="Solar Zenith"  # type: ignore[type-abstract]
+    )
     """Solar zenith angle."""
 
-    solar_azimuth: ParameterField = ParameterField(
-        AngleParameter, title="Solar Azimuth"
+    solar_azimuth: ParameterField[AngleParameter] = ParameterField(
+        AngleParameter, title="Solar Azimuth"  # type: ignore[type-abstract]
     )
     """Solar azimuth angle."""
 
-    view_zenith: ParameterField = ParameterField(AngleParameter, title="View Zenith")
+    view_zenith: ParameterField[AngleParameter] = ParameterField(
+        AngleParameter, title="View Zenith"  # type: ignore[type-abstract]
+    )
     """Target zenith angle."""
 
-    view_azimuth: ParameterField = ParameterField(AngleParameter, title="View Azimuth")
+    view_azimuth: ParameterField[AngleParameter] = ParameterField(
+        AngleParameter, title="View Azimuth"  # type: ignore[type-abstract]
+    )
     """Target azimuth angle."""
 
     day: IntField = IntField(title="Day")

@@ -307,6 +307,7 @@ class ParallelConcurrentExecutor(LocalMemoryExecutor):
         else:
             dim = self._split_dim
 
+        sections: int | Sequence[int]
         if self._split_sections is None:
             sections = sweep.dims[dim]
         else:

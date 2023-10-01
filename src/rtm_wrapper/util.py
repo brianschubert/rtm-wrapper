@@ -22,12 +22,14 @@ class TrapCalledError(RuntimeError):
     args: tuple[Any, ...]
     kwargs: dict[str, Any]
 
-    def __init__(self, message, args: tuple[Any, ...], kwargs: dict[str, Any]) -> None:
+    def __init__(
+        self, message: str, args: tuple[Any, ...], kwargs: dict[str, Any]
+    ) -> None:
         self.message = message
         self.args = args
         self.kwargs = kwargs
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"Trap called: {self.message}."
 
 

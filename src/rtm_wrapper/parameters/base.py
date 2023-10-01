@@ -10,7 +10,7 @@ import re
 from typing import Any, ClassVar, Generator, Generic, Mapping, TypeVar, Union, overload
 
 import numpy as np
-from typing_extensions import Literal, TypeAlias
+from typing_extensions import Literal, Self, TypeAlias
 
 from .util import MetadataDict, ParameterError, UnsetParameterError
 
@@ -48,7 +48,7 @@ class Field(Generic[F]):
     unit: str | None
     """Unit that this field is measured in."""
 
-    dtype: ClassVar[np.dtype]
+    dtype: ClassVar[np.dtype[Any]]
     """Numpy dtype used to store sweeps of this field."""
 
     def __init__(self, title: str | None = None, unit: str | None = None):
@@ -100,7 +100,7 @@ class ParameterMeta(type):
         /,
         **kwargs: Any,
     ) -> type:
-        cls = super().__new__(cls, name, bases, namespace, **kwargs)
+        class_obj = super().__new__(cls, name, bases, namespace, **kwargs)
 
         fields = set()
 
@@ -114,9 +114,9 @@ class ParameterMeta(type):
             name for name, value in namespace.items() if isinstance(value, Field)
         )
 
-        cls._fields = frozenset(fields)
+        class_obj._fields = frozenset(fields)
 
-        return cls
+        return class_obj
 
 
 class Parameter(metaclass=ParameterMeta):
@@ -148,7 +148,7 @@ class Parameter(metaclass=ParameterMeta):
 
         return f"{type(self).__name__}({', '.join(field_parts)})"
 
-    def replace(self, *args: Any, **kwargs: Any) -> Parameter:
+    def replace(self, *args: Any, **kwargs: Any) -> Self:
         duplicate = copy.deepcopy(self)
         duplicate.set(*args, **kwargs)
         return duplicate
@@ -328,7 +328,7 @@ class IntField(Field[int]):
     dtype = np.dtype(int)
 
 
-class FloatArrayField(Field[np.ndarray]):
+class FloatArrayField(Field[np.ndarray[Any, Any]]):
     """Field taking on a float value."""
 
     # TODO array validation
