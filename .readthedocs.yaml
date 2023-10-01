@@ -10,6 +10,9 @@ python:
     # Documentation build requirements. Regenerate with:
     #   $ poetry export --format='requirements.txt' --only=docs > docs/requirements.txt
     - requirements: docs/requirements.txt
+    # Install this distribution.
+    - method: pip
+      path: .
 
 sphinx:
   configuration: docs/conf.py
