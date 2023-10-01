@@ -6,18 +6,24 @@ from __future__ import annotations
 
 import logging
 
+from typing_extensions import Never
+
 from rtm_wrapper.engines.base import EngineOutputs, RTMEngine
 from rtm_wrapper.simulation import Inputs
 
 
 # TODO: update to new ouptut api
 class DummyEngine(RTMEngine):
+    """Dummy engine that logs its inputs and produces no outputs."""
+
     def run_simulation(self, inputs: Inputs) -> EngineOutputs:
         logger = logging.getLogger(__name__)
         logger.info("%r", inputs)
-        raise NotImplementedError
+        return {}
 
 
 class NotImplementedEngine(RTMEngine):
-    def run_simulation(self, inputs: Inputs) -> EngineOutputs:
+    """Dummy engine that raises ``NotImplementedError`` when run."""
+
+    def run_simulation(self, inputs: Inputs) -> Never:
         raise NotImplementedError
