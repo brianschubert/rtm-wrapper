@@ -143,5 +143,14 @@ def pysixs_default_inputs() -> Inputs:
     )
 
 
+def pysixs_standard_inputs() -> Inputs:
+    """
+    Return modified version of Py6S' default input parameters.
+
+    Sets the default sensor altitude to satellite level.
+    """
+    return pysixs_default_inputs().replace(altitude_sensor__name="satellite")
+
+
 # Register parameters and outputs.
 from . import _impl
