@@ -8,13 +8,12 @@ RTM Wrapper
 
 .. toctree::
    :maxdepth: 2
-   :caption: Contents:
 
+   api
+   genindex
 
+Description
+-----------
 
-Indices and tables
-==================
-
-* :ref:`genindex`
-* :ref:`modindex`
-* :ref:`search`
+.. include:: ../README.rst
+   :start-line: 3
