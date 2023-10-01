@@ -11,15 +11,14 @@ import importlib.metadata
 import rtm_wrapper.util
 
 project = "RTM Wrapper"
-copyright = "2023, Brian Schubert"
 author = " & ".join(importlib.metadata.metadata("rtm-wrapper").get_all("Author"))
+copyright = f"2023, {author}"
 release = rtm_wrapper.__version__
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
 
 extensions = ["autoapi.extension"]
-autoapi_dirs = ["../src/rtm_wrapper/"]
 
 templates_path = ["_templates"]
 exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
@@ -29,3 +28,21 @@ exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
 
 html_theme = "furo"
 html_static_path = ["_static"]
+
+# sphinx-autoapi configuration.
+autoapi_dirs = ["../src/rtm_wrapper/"]
+autoapi_options = [
+    "members",
+    # "undoc-members",
+    # "private-members",
+    "show-inheritance",
+    "show-module-summary",
+    "special-members",
+    # "imported-members",
+]
+
+# Include type hints in both the signatures and description.
+autodoc_typehints = "both"
+
+# Don't use fully qualified names when documenting module members.
+add_module_names = False
