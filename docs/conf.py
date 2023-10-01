@@ -18,7 +18,7 @@ release = rtm_wrapper.__version__
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
 
-extensions = ["autoapi.extension"]
+extensions = ["sphinx.ext.autodoc", "autoapi.extension"]
 
 templates_path = ["_templates"]
 exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
@@ -43,6 +43,9 @@ autoapi_options = [
 
 # Include type hints in both the signatures and description.
 autodoc_typehints = "both"
+
+# Include both class docstring and __init__ docstring.
+autoapi_python_class_content = "both"
 
 # Don't use fully qualified names when documenting module members.
 add_module_names = False
