@@ -1,6 +1,7 @@
 # RTM Wrapper
 
 [![Code style: black](https://img.shields.io/badge/code%20style-black-black.svg)](https://github.com/psf/black)
+[![Documentation Status](https://readthedocs.org/projects/rtm-wrapper/badge/?version=develop)](https://rtm-wrapper.readthedocs.io/en/develop/?badge=develop)
 
 Common wrapper interface for various Radiative Transfer Models (RTMs).
 
