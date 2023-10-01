@@ -1,3 +1,6 @@
+"""
+RTM engine definition.
+"""
 from __future__ import annotations
 
 import abc
@@ -34,12 +37,26 @@ class RTMEngine(abc.ABC):
     """
 
     params: ClassVar[ParameterRegistry[...]]
+    """
+    Registry of the input parameters that this engine can handle.
+    """
 
     outputs: ClassVar[OutputRegistry]
+    """
+    Registry of the outputs that can be extracted from run of this engine.
+    """
 
     virtual_outputs: ClassVar[tuple[OutputName, ...]] = ()
+    """
+    Mock outputs produced by this engine without invoking an output extractor.
+    """
 
     default_outputs: ClassVar[tuple[OutputName, ...]]
+    """
+    The default outputs returned from runs of this engine.
+    
+    This can be overridem by passing the ``outputs`` keyword argument to ``__init__``.
+    """
 
     _requested_outputs: tuple[OutputName, ...]
 
@@ -67,6 +84,11 @@ class RTMEngine(abc.ABC):
 
     @property
     def requested_outputs(self) -> tuple[OutputName, ...]:
+        """
+        Currently configured outputs for this engine.
+
+        Re-assign to change the configured outputs.
+        """
         return self._requested_outputs
 
     @requested_outputs.setter
@@ -90,7 +112,11 @@ class RTMEngine(abc.ABC):
 
     @abc.abstractmethod
     def run_simulation(self, inputs: Inputs) -> EngineOutputs:
-        ...
+        """
+        Run this RTM module using the given inputs.
+
+        :param inputs: Input parameter tree.
+        """
 
     def _extract_outputs(self, outputs: EngineOutputs) -> None:
         # TODO: verify that virtuals have been set?
@@ -111,6 +137,8 @@ class RTMEngine(abc.ABC):
 
 
 class ParameterRegistry(Generic[P]):
+    """Registry of input parameters supported by an RTM engine."""
+
     param_implementations: dict[
         tuple[InputTopName, type[Parameter]], ParameterHandler[Parameter, P]
     ]
@@ -121,6 +149,8 @@ class ParameterRegistry(Generic[P]):
     def register(
         self, name: InputTopName, type_: type[Parameter] | None = None
     ) -> Callable[[ParameterHandler[R, P]], ParameterHandler[R, P]]:
+        """Return decorator for registering a new input parameter."""
+
         def _register(func: ParameterHandler[R, P]) -> Callable[..., Never]:
             if type_ is None:
                 # Infer type from annotation of first positional argument.
@@ -169,6 +199,8 @@ class ParameterRegistry(Generic[P]):
 
 
 class OutputRegistry:
+    """Registry of outputs that can be extracted from an RTM engine run."""
+
     _extractors: dict[OutputName, tuple[tuple[OutputName, ...], OutputExtractor]]
 
     _metadata: dict[OutputName, MetadataDict]
@@ -182,6 +214,7 @@ class OutputRegistry:
 
     @property
     def names(self) -> Iterable[OutputName]:
+        """Return an iterable of the names of all outputs that have been registered."""
         return self._extractors.keys()
 
     def register(
@@ -194,6 +227,10 @@ class OutputRegistry:
         unit: str | None = None,
         dtype: np.dtype[Any] | None = None,
     ) -> Callable[[OutputExtractor], OutputExtractor]:
+        """
+        Return a decorator for registering an RTM engine output.
+        """
+
         def _register(func: OutputExtractor) -> OutputExtractor:
             output_name = name if name is not None else func.__name__
 
@@ -249,6 +286,13 @@ class OutputRegistry:
     def extraction_order(
         self, requested: Iterable[OutputName]
     ) -> tuple[OutputName, ...]:
+        """
+        Return a minial static extraction order for extracting the requested outputs.
+
+        :param requested: Names of outputs that must be extracted.
+        :return: Valid extraction order for obtaining the requested outputs. Includes
+                 the requested outputs and their minimal prerequisites.
+        """
         processed = set()
         required_extractions = set(requested)
         pending = set(required_extractions)

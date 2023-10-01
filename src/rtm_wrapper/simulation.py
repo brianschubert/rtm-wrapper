@@ -1,8 +1,15 @@
+"""
+Simulation sweep specification.
+
+Sweeps systematically vary fields in :class:`~rtm_wrapper.simulation.Inputs` tree.
+Typically, sweeps are used with an executor from :mod:`.execution` to perform an RTM
+simulation for each input variation.
+"""
+
 from __future__ import annotations
 
 import copy
 import math
-import operator
 import typing
 from collections.abc import Iterable, Mapping, Sequence
 from typing import Any, Final, Literal, Union
@@ -52,6 +59,9 @@ INPUT_TOP_NAMES: Final[frozenset[InputTopName]] = frozenset(
 
 ParameterValues: TypeAlias = Sequence[Any]
 SweepScript: TypeAlias = dict[str, Union[ParameterValues, dict[str, Any]]]
+"""
+Dictionary description of a simulation sweep.
+"""
 
 _PARAMETER_AXES_SEP: Final[str] = "/"
 
@@ -60,22 +70,29 @@ class Inputs(Parameter):
     """
     Common input specification for RTM simulations.
 
-    Temporary / unstable representation.
+    .. warning:: Temporary / unstable representation.
     """
 
-    altitude_sensor = ParameterField(Parameter)
+    altitude_sensor: ParameterField[Any] = ParameterField(Parameter)
+    """Sensor altitude description."""
 
-    altitude_target = ParameterField(Parameter)
+    altitude_target: ParameterField[Any] = ParameterField(Parameter)
+    """Target altitude description."""
 
-    atmosphere = ParameterField(Parameter)
+    atmosphere: ParameterField[Any] = ParameterField(Parameter)
+    """Atmosphere description."""
 
-    aerosol_profile = ParameterField(Parameter)
+    aerosol_profile: ParameterField[Any] = ParameterField(Parameter)
+    """Aerosol profile description."""
 
-    geometry = ParameterField(Parameter)
+    geometry: ParameterField[Any] = ParameterField(Parameter)
+    """Geometry description."""
 
-    ground = ParameterField(Parameter)
+    ground: ParameterField[Any] = ParameterField(Parameter)
+    """Ground / background / target description."""
 
-    wavelength = ParameterField(Parameter)
+    wavelength: ParameterField[Any] = ParameterField(Parameter)
+    """Spectrum description."""
 
 
 # @dataclass
@@ -143,7 +160,7 @@ class SweepSimulation:
     """
     Sweep specification over model inputs.
 
-    Temporary / unstable representation.
+    .. warning:: Temporary / unstable representation.
     """
 
     sweep_spec: xr.Dataset
@@ -153,6 +170,11 @@ class SweepSimulation:
     _input_coords: frozenset[str]
 
     def __init__(self, script: SweepScript, base: Inputs) -> None:
+        """
+        :param script: Sweep description.
+        :param base: Base input tree whose fields will be overriden during the sweep
+                     according to the sweep script.
+        """
         sweep_coords = _script2coords(script, base)
 
         # Create an empty dataset to validate the sweep coordinates
@@ -161,8 +183,8 @@ class SweepSimulation:
         self.base = base
 
         # TODO more robust input coordinate detection
-        self._input_coords = frozenset(  # type: ignore
-            coord
+        self._input_coords = frozenset(
+            typing.cast(str, coord)
             for coord in self.sweep_spec.coords.keys()
             if any(coord.startswith(top_name) for top_name in INPUT_TOP_NAMES)  # type: ignore
         )
@@ -188,7 +210,7 @@ class SweepSimulation:
         #         }
         #         x[...] = base.replace(overrides)  # type: ignore
 
-    def __getitem__(self, item: tuple[int, ...]) -> Inputs | np.ndarray:
+    def __getitem__(self, item: tuple[int, ...]) -> Inputs | np.ndarray[Any, Any]:
         overrides = {
             k: v.item() if v.size == 1 else v.squeeze()
             for k, v in self.sweep_spec.isel(

@@ -1,49 +1,27 @@
 """
-Model agnostic descriptions of simulation input parameters.
+Base classes defining the parameter tree.
 """
-
 from __future__ import annotations
 
 import abc
 import contextlib
 import copy
-import math
 import re
-from collections.abc import Mapping
-from typing import (
-    Any,
-    ClassVar,
-    Generator,
-    Generic,
-    TypedDict,
-    TypeVar,
-    Union,
-    overload,
-)
+from typing import Any, ClassVar, Generator, Generic, Mapping, TypeVar, Union, overload
 
 import numpy as np
-from typing_extensions import Literal, NotRequired, TypeAlias
+from typing_extensions import Literal, Self, TypeAlias
 
-_VALIDATE_FIELDS: bool = True
+from .util import MetadataDict, ParameterError, UnsetParameterError
 
 ParameterPath: TypeAlias = Union[str, tuple[str, ...]]
-
 T = TypeVar("T")
 F = TypeVar("F")
+
 P = TypeVar("P", bound="Parameter")
 
 
-class ParameterError(Exception):
-    """Raised on invalid parameter access."""
-
-
-class UnsetParameterError(ParameterError):
-    """Raised on attempt to access an unset parameter."""
-
-
-class MetadataDict(TypedDict):
-    title: NotRequired[str]
-    unit: NotRequired[str]
+_VALIDATE_FIELDS: bool = True
 
 
 class Field(Generic[F]):
@@ -70,7 +48,7 @@ class Field(Generic[F]):
     unit: str | None
     """Unit that this field is measured in."""
 
-    dtype: ClassVar[np.dtype]
+    dtype: ClassVar[np.dtype[Any]]
     """Numpy dtype used to store sweeps of this field."""
 
     def __init__(self, title: str | None = None, unit: str | None = None):
@@ -109,53 +87,6 @@ class Field(Generic[F]):
         return metadata
 
 
-class ParameterField(Field[P]):
-    """
-    Field containing a swappable parameter.
-
-    Creates a branch in the parameter tree.
-    """
-
-    _parameter_type: type[P]
-
-    def __init__(self, parameter_type: type[P], title: str | None = None) -> None:
-        super().__init__(title=title, unit=None)
-        self._parameter_type = parameter_type
-
-    def validate(self, instance: Any, value: F) -> None:
-        if not isinstance(value, self._parameter_type):
-            raise ParameterError(
-                f"value for {type(instance).__name__}.{self.public_name}"
-                f" must be subclass of {self._parameter_type.__name__},"
-                f" got type {type(value).__name__}"
-            )
-
-
-class StrField(Field[str]):
-    """Field taking on a string value."""
-
-    dtype = np.dtype(str)
-
-
-class FloatField(Field[float]):
-    """Field taking on a float value."""
-
-    dtype = np.dtype(float)
-
-
-class IntField(Field[int]):
-    """Field taking on an integer value."""
-
-    dtype = np.dtype(int)
-
-
-class FloatArrayField(Field[np.ndarray]):
-    """Field taking on a float value."""
-
-    # TODO array validation
-    dtype = np.dtype(float)
-
-
 class ParameterMeta(type):
     """Metaclass for parameters."""
 
@@ -169,7 +100,7 @@ class ParameterMeta(type):
         /,
         **kwargs: Any,
     ) -> type:
-        cls = super().__new__(cls, name, bases, namespace, **kwargs)
+        class_obj = super().__new__(cls, name, bases, namespace, **kwargs)
 
         fields = set()
 
@@ -183,9 +114,9 @@ class ParameterMeta(type):
             name for name, value in namespace.items() if isinstance(value, Field)
         )
 
-        cls._fields = frozenset(fields)
+        class_obj._fields = frozenset(fields)
 
-        return cls
+        return class_obj
 
 
 class Parameter(metaclass=ParameterMeta):
@@ -217,7 +148,7 @@ class Parameter(metaclass=ParameterMeta):
 
         return f"{type(self).__name__}({', '.join(field_parts)})"
 
-    def replace(self, *args: Any, **kwargs: Any) -> Parameter:
+    def replace(self, *args: Any, **kwargs: Any) -> Self:
         duplicate = copy.deepcopy(self)
         duplicate.set(*args, **kwargs)
         return duplicate
@@ -357,88 +288,51 @@ def _parse_parameter_path(param_path: str | tuple[str, ...]) -> tuple[str, ...]:
     return tuple(re.split(r"\.|__", param_path))
 
 
-class AltitudePredefined(Parameter):
-    name = StrField(title="Altitude")
+class ParameterField(Field[P]):
+    """
+    Field containing a swappable parameter.
+
+    Creates a branch in the parameter tree.
+    """
+
+    _parameter_type: type[P]
+
+    def __init__(self, parameter_type: type[P], title: str | None = None) -> None:
+        super().__init__(title=title, unit=None)
+        self._parameter_type = parameter_type
+
+    def validate(self, instance: Any, value: F) -> None:
+        if not isinstance(value, self._parameter_type):
+            raise ParameterError(
+                f"value for {type(instance).__name__}.{self.public_name}"
+                f" must be subclass of {self._parameter_type.__name__},"
+                f" got type {type(value).__name__}"
+            )
 
 
-class AltitudeKilometers(Parameter):
-    value = FloatField(title="Altitude", unit="km")
+class StrField(Field[str]):
+    """Field taking on a string value."""
+
+    dtype = np.dtype(str)
 
 
-class AtmospherePredefined(Parameter):
-    name = StrField(title="Atmosphere Profile")
+class FloatField(Field[float]):
+    """Field taking on a float value."""
+
+    dtype = np.dtype(float)
 
 
-class AtmosphereWaterOzone(Parameter):
-    water = FloatField(title="Water Column", unit="g/cm^2")
-    ozone = FloatField(title="Ozone Column", unit="cm-atm")
+class IntField(Field[int]):
+    """Field taking on an integer value."""
+
+    dtype = np.dtype(int)
 
 
-class AerosolProfilePredefined(Parameter):
-    profile = StrField(title="Aerosol Profile")
+class FloatArrayField(Field[np.ndarray[Any, Any]]):
+    """Field taking on a float value."""
 
-
-class AerosolAOTSingleLayer(AerosolProfilePredefined):
-    height = FloatField(title="Height", unit="km")
-    aot = FloatField(title="AOT", unit="1")
-
-
-class AerosolAOTLayers(AerosolProfilePredefined):
-    layers = FloatArrayField()
-
-
-class GroundReflectanceHomogenousUniformLambertian(Parameter):
-    reflectance = FloatField(title="Reflectance", unit="1")
-
-
-class GroundReflectanceHomogenousLambertian(Parameter):
-    wavelengths = FloatArrayField("Wavelength", unit="micrometers")
-    spectrum = FloatArrayField("Reflectance", unit="1")
-
-
-# @dataclass
-# class GroundReflectanceHeterogeneousUniformLambertian(Parameter):
-#     target: float
-#     background: float
-
-
-class GroundReflectanceHeterogeneousLambertian(Parameter):
-    target = ParameterField(GroundReflectanceHomogenousLambertian)
-    background = ParameterField(GroundReflectanceHomogenousLambertian)
-
-
-class WavelengthFixed(Parameter):
-    value = FloatField(title="Wavelength", unit="micrometers")
-
-
-class AngleParameter(AbstractParameter):
-    @abc.abstractmethod
-    def as_degrees(self) -> float:
-        ...
-
-
-class AngleDegreesParameter(AngleParameter):
-    degrees = FloatField(title="Angle", unit="degrees")
-
-    def as_degrees(self) -> float:
-        return self.degrees
-
-
-class AngleCosineParameter(AngleParameter):
-    cosine = FloatField(title="Angle Cosine", unit="1")
-
-    def as_degrees(self) -> float:
-        m = math  # Save a LOAD_GLOBAL. Probably a flagrantly premmature optiziataion
-        return m.degrees(m.acos(self.cosine))
-
-
-class GeometryAngleDate(Parameter):
-    solar_zenith = ParameterField(AngleParameter, title="Solar Zenith")
-    solar_azimuth = ParameterField(AngleParameter, title="Solar Azimuth")
-    view_zenith = ParameterField(AngleParameter, title="View Zenith")
-    view_azimuth = ParameterField(AngleParameter, title="View Azimuth")
-    day = IntField(title="Day")
-    month = IntField(title="Month")
+    # TODO array validation
+    dtype = np.dtype(float)
 
 
 @contextlib.contextmanager

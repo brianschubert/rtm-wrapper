@@ -1,3 +1,10 @@
+"""
+Simulation sweep execution.
+
+Executor objects are responsible for repeatedly running simulations with a specific
+RTM engine according to a sweep specification.
+"""
+
 from __future__ import annotations
 
 import abc
@@ -38,11 +45,11 @@ class SweepExecutor(abc.ABC):
         engine: RTMEngine,
         **kwargs: Any,
     ) -> None:
-        ...
+        """Execute a sweep simulation using the given engine."""
 
     @abc.abstractmethod
     def collect_results(self) -> xr.Dataset:
-        ...
+        """Collect the results from the last run sweep."""
 
 
 class LocalMemoryExecutor(SweepExecutor, ABC):
@@ -178,10 +185,11 @@ class ConcurrentExecutor(LocalMemoryExecutor):
     This executor is designed to take advantage of engines that release the GIL
     while running.
 
-    **WARNING**: this executor assumes that the provided engine's ``run_simulation``
-    method is thread-safe. All worker threads operate on the same engine instance.
-    Make sure that the provided engine *does not* mutate itself or any global state
-    without appropriate locking.
+    .. warning::
+        This executor assumes that the provided engine's ``run_simulation``
+        method is thread-safe. All worker threads operate on the same engine instance.
+        Make sure that the provided engine *does not* mutate itself or any global state
+        without appropriate locking.
     """
 
     _max_workers: int
@@ -250,7 +258,7 @@ class ConcurrentExecutor(LocalMemoryExecutor):
 
 class ParallelConcurrentExecutor(LocalMemoryExecutor):
     """
-    Executor that runs multiple ``ConcurrentExecutor``s in spawned subprocesses.
+    Executor that runs multiple :class:`.ConcurrentExecutor`\\s in spawned subprocesses.
 
     This can improve performance over ``ConcurrentExecutor`` when simulation sweeps
     are Python bounded, which can happen when individual simulator runs are fast or
@@ -303,6 +311,7 @@ class ParallelConcurrentExecutor(LocalMemoryExecutor):
         else:
             dim = self._split_dim
 
+        sections: int | Sequence[int]
         if self._split_sections is None:
             sections = os.cpu_count()
         else:

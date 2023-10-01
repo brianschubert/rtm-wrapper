@@ -1,3 +1,7 @@
+"""
+Utilities for plotting sweep simulation results.
+"""
+
 from __future__ import annotations
 
 from typing import Any, Hashable
@@ -95,7 +99,7 @@ def plot_sweep_grid(
     fig: Figure | None = None,
     allow_big_grid: bool = False,
     subplot_kwargs: dict[str, Any] | None = None,
-) -> tuple[Figure, Axes | np.ndarray]:
+) -> tuple[Figure, Axes | np.ndarray[Any, Any]]:
     sweep_variable = sweep_variable.squeeze(drop=True)
 
     if sweep_variable.ndim != 3:

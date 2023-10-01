@@ -22,12 +22,14 @@ class TrapCalledError(RuntimeError):
     args: tuple[Any, ...]
     kwargs: dict[str, Any]
 
-    def __init__(self, message, args: tuple[Any, ...], kwargs: dict[str, Any]) -> None:
+    def __init__(
+        self, message: str, args: tuple[Any, ...], kwargs: dict[str, Any]
+    ) -> None:
         self.message = message
         self.args = args
         self.kwargs = kwargs
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"Trap called: {self.message}."
 
 
@@ -89,6 +91,7 @@ def partition_dict(
 
 
 def build_version() -> str:
+    """Return the version of this distribution with local build number, if available."""
     base_version = importlib.metadata.version("rtm-wrapper")
     try:
         result = subprocess.run(
@@ -104,10 +107,15 @@ def build_version() -> str:
 
 
 def platform_summary() -> str:
+    """Return a platform summary string."""
     return f"{platform.python_implementation()} {platform.python_version()} ({' '.join(platform.uname())})"
 
 
 def first_or(iterable: Iterable[_T], default: _T | None = None) -> _T | None:
+    """
+    Return the first element of the iterable, or the given default if the iterable
+    is empty.
+    """
     try:
         return next(iter(iterable))
     except StopIteration:
