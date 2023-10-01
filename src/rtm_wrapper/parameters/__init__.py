@@ -358,10 +358,19 @@ def _parse_parameter_path(param_path: str | tuple[str, ...]) -> tuple[str, ...]:
 
 
 class AltitudePredefined(Parameter):
-    name = StrField(title="Altitude")
+    name: StrField = StrField(title="Altitude")
+    """
+    Test 1
+    """
 
 
 class AltitudeKilometers(Parameter):
+    """
+    test 2
+
+    :ivar value: test 3
+    """
+
     value = FloatField(title="Altitude", unit="km")
 
 
