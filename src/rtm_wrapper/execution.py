@@ -257,7 +257,7 @@ class ConcurrentExecutor(LocalMemoryExecutor):
 
 class ParallelConcurrentExecutor(LocalMemoryExecutor):
     """
-    Executor that runs multiple :class:`.ConcurrentExecutor`\s in spawned subprocesses.
+    Executor that runs multiple :class:`.ConcurrentExecutor`\\s in spawned subprocesses.
 
     This can improve performance over ``ConcurrentExecutor`` when simulation sweeps
     are Python bounded, which can happen when individual simulator runs are fast or

@@ -55,7 +55,7 @@ class RTMEngine(abc.ABC):
     """
     The default outputs returned from runs of this engine.
     
-    This can be overridem by passing the ``outputs`` keyword argument to ``__init__`.
+    This can be overridem by passing the ``outputs`` keyword argument to ``__init__``.
     """
 
     _requested_outputs: tuple[OutputName, ...]
