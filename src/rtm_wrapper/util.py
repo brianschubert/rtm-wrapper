@@ -91,6 +91,7 @@ def partition_dict(
 
 
 def build_version() -> str:
+    """Return the version of this distribution with local build number, if available."""
     base_version = importlib.metadata.version("rtm-wrapper")
     try:
         result = subprocess.run(
@@ -106,10 +107,15 @@ def build_version() -> str:
 
 
 def platform_summary() -> str:
+    """Return a platform summary string."""
     return f"{platform.python_implementation()} {platform.python_version()} ({' '.join(platform.uname())})"
 
 
 def first_or(iterable: Iterable[_T], default: _T | None = None) -> _T | None:
+    """
+    Return the first element of the iterable, or the given default if the iterable
+    is empty.
+    """
     try:
         return next(iter(iterable))
     except StopIteration:
